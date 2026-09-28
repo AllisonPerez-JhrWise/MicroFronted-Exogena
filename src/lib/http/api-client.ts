@@ -9,8 +9,11 @@ export interface RequestOptions<TSchema extends z.ZodType> {
   /** Esquema con el que se valida la respuesta del microservicio. */
   schema: TSchema;
   query?: Record<string, QueryValue>;
+  /** Objeto que se envía como JSON, o FormData para subir archivos. */
   body?: unknown;
   headers?: HeadersInit;
+  /** Sobrescribe el timeout global (p. ej. para subidas de archivos grandes). */
+  timeoutMs?: number;
   signal?: AbortSignal;
 }
 
@@ -37,9 +40,11 @@ async function readBody(response: Response) {
 
 export async function apiRequest<TSchema extends z.ZodType>(
   path: string,
-  { method = "GET", schema, query, body, headers, signal }: RequestOptions<TSchema>,
+  { method = "GET", schema, query, body, headers, signal, timeoutMs = env.apiTimeoutMs }: RequestOptions<TSchema>,
 ): Promise<z.infer<TSchema>> {
-  const timeout = AbortSignal.timeout(env.apiTimeoutMs);
+  const timeout = AbortSignal.timeout(timeoutMs);
+  // Con FormData el navegador define el Content-Type (con su boundary).
+  const esFormulario = body instanceof FormData;
   const finalSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
 
   let response: Response;
@@ -49,11 +54,11 @@ export async function apiRequest<TSchema extends z.ZodType>(
       signal: finalSignal,
       headers: {
         Accept: "application/json",
-        ...(body !== undefined && { "Content-Type": "application/json" }),
+        ...(body !== undefined && !esFormulario && { "Content-Type": "application/json" }),
         ...(await headersProvider()),
         ...headers,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: esFormulario ? body : body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (error) {
     if (timeout.aborted) {
