@@ -6,6 +6,8 @@ export class ApiError extends Error {
     readonly kind: ApiErrorKind,
     readonly status?: number,
     readonly body?: unknown,
+    /** Identificador de la petición que entrega el microservicio, para soporte. */
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = "ApiError";

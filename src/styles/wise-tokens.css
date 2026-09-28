@@ -1,0 +1,98 @@
+/* =====================================================================
+   Wise · tokens de diseño
+   Fuente única de verdad para color, tipografía, espacio y forma.
+   Si un valor no está aquí, no debería estar en el código de una pantalla.
+   ===================================================================== */
+:root{
+  /* --- marca: vinotinto. Es el único color de marca. ----------------- */
+  --wi-marca:#5C141B;            /* logo y piezas impresas */
+  --wi-marca-pantalla:#8D0C18;   /* interfaz: entrada activa, borde de fila */
+  --wi-marca-suave:#F6ECED;      /* fondo de lo activo */
+  --wi-marca-linea:#E8CDD0;
+
+  /* --- neutros ------------------------------------------------------- */
+  --wi-tinta:#14181D;            /* títulos y acciones principales */
+  --wi-texto:#3A4149;            /* texto corriente */
+  --wi-secundario:#5A6472;       /* texto de apoyo */
+  --wi-tenue:#8A94A1;            /* etiquetas, placeholders */
+  --wi-borde:#E1E5EA;
+  --wi-borde-fuerte:#CBD2D9;     /* bordes de control */
+  --wi-borde-suave:#EDF0F3;      /* separadores dentro de tablas y tarjetas */
+  --wi-superficie:#FFFFFF;
+  --wi-lienzo:#F7F8FA;           /* fondo de la aplicación */
+  --wi-hover:#F4F6F8;            /* fila y control bajo el cursor */
+
+  /* --- datos: escala índigo, de lo hecho a lo que falta -------------- */
+  --wi-dato-1:#2E3080;
+  --wi-dato-2:#4A4CB0;
+  --wi-dato-3:#7376C6;
+  --wi-dato-4:#9497D4;
+  --wi-dato-riel:#E4E5F6;        /* fondo de la barra de avance */
+
+  /* --- estados: solo tiene color lo que pide algo -------------------- */
+  --wi-accion:#8F5400;           /* por aprobar, por renovar */
+  --wi-accion-fondo:#FDEFDD;
+  --wi-accion-linea:#EFD5B1;
+  --wi-riesgo:#B1291B;           /* vencido, hallazgo, bloqueo */
+  --wi-riesgo-fondo:#FFEBE6;
+  --wi-riesgo-linea:#FCCCC4;
+  --wi-ok:#1E7546;               /* confirmaciones tras una acción e interruptores encendidos */
+  --wi-ok-fondo:#E3F7E9;
+  --wi-ok-linea:#BDE4CA;
+  --wi-neutro:#4A5159;           /* el resto de los estados */
+  --wi-neutro-fondo:#F1F3F5;
+  --wi-neutro-linea:#E1E5EA;
+
+  /* --- tipografía ---------------------------------------------------- */
+  --wi-fuente:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --wi-t-portada:24px;   /* 600 */
+  --wi-t-pantalla:20px;  /* 600 */
+  --wi-t-seccion:15px;   /* 600 */
+  --wi-t-tarjeta:13px;   /* 600 */
+  --wi-t-cuerpo:13px;    /* 400 */
+  --wi-t-nav:12.5px;     /* 500 */
+  --wi-t-tabla:12px;     /* 400 */
+  --wi-t-apoyo:11.5px;   /* 400 */
+  --wi-t-antetitulo:10.5px; /* 600, versalitas, letter-spacing .08em */
+
+  /* --- espacio: múltiplos de 4, con 6 como excepción ----------------- */
+  --wi-e-1:4px; --wi-e-2:6px; --wi-e-3:8px; --wi-e-4:12px;
+  --wi-e-5:16px; --wi-e-6:24px; --wi-e-7:32px; --wi-e-8:40px;
+
+  /* --- forma y movimiento -------------------------------------------- */
+  --wi-r-control:6px;    /* botones, campos */
+  --wi-r-nav:8px;        /* entradas del menú */
+  --wi-r-tarjeta:10px;
+  --wi-r-pildora:20px;
+  --wi-transicion:150ms ease;
+  --wi-foco:0 0 0 3px rgba(141,12,24,.28);   /* anillo de foco visible */
+
+  /* --- estructura ----------------------------------------------------- */
+  --wi-barra:244px;      /* barra lateral */
+  --wi-barra-min:62px;   /* barra contraída */
+  --wi-topbar:52px;
+  --wi-fila:28px;        /* alto de fila de tabla */
+  --wi-contenido:1240px; /* ancho máximo del contenido */
+}
+
+/* --- modo oscuro: se elige aparte, no es la inversión del claro ------- */
+:root[data-tema="oscuro"]{
+  --wi-marca-pantalla:#E4A0A7;   /* el #8D0C18 queda en 1,87:1 sobre oscuro: no usar */
+  --wi-marca-suave:#2A1A1D;
+  --wi-marca-linea:#C0626B;
+  --wi-tinta:#FFFFFF;
+  --wi-texto:#D6DBE1;
+  --wi-secundario:#A9B0BA;
+  --wi-tenue:#7C8693;
+  --wi-borde:#2E353D;
+  --wi-borde-fuerte:#3C444E;
+  --wi-borde-suave:#242A31;
+  --wi-superficie:#1D2229;
+  --wi-lienzo:#14181D;
+  --wi-hover:#242A31;
+  --wi-dato-1:#C6C8EC;
+  --wi-dato-2:#A5A8E0;
+  --wi-dato-3:#8083CE;
+  --wi-dato-4:#5A5DB4;
+  --wi-dato-riel:#2A2F45;
+}

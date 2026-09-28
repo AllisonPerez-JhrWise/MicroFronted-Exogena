@@ -65,9 +65,11 @@ export async function apiRequest<TSchema extends z.ZodType>(
   }
 
   const data = await readBody(response);
+  const requestId =
+    response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? undefined;
 
   if (!response.ok) {
-    throw new ApiError(`Error ${response.status} en ${method} ${path}`, "http", response.status, data);
+    throw new ApiError(`Error ${response.status} en ${method} ${path}`, "http", response.status, data, requestId);
   }
 
   const result = schema.safeParse(data);
@@ -77,6 +79,7 @@ export async function apiRequest<TSchema extends z.ZodType>(
       "validation",
       response.status,
       result.error.issues,
+      requestId,
     );
   }
   return result.data;

@@ -1,26 +1,153 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+@import "../styles/wise-tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/*
+ * Tailwind queda restringido a los tokens Wise (docs/diseno-wise.md): se borran las
+ * escalas por defecto para que un color, tamaño o radio fuera de la guía no compile.
+ *   Color:   bg-wi-lienzo, text-wi-secundario, border-wi-borde…
+ *   Espacio: p-1…p-8 = --wi-e-1…--wi-e-8 (4·6·8·12·16·24·32·40 px)
+ *   Texto:   text-pantalla, text-cuerpo, text-tabla, text-apoyo…
+ *   Radio:   rounded-control, rounded-nav, rounded-tarjeta, rounded-pildora
+ *   Quiebre: amplio: (≥ 1100 px)
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-*: initial;
+  --color-white: #fff;
+  --color-wi-marca: var(--wi-marca);
+  --color-wi-marca-pantalla: var(--wi-marca-pantalla);
+  --color-wi-marca-suave: var(--wi-marca-suave);
+  --color-wi-marca-linea: var(--wi-marca-linea);
+  --color-wi-tinta: var(--wi-tinta);
+  --color-wi-texto: var(--wi-texto);
+  --color-wi-secundario: var(--wi-secundario);
+  --color-wi-tenue: var(--wi-tenue);
+  --color-wi-borde: var(--wi-borde);
+  --color-wi-borde-fuerte: var(--wi-borde-fuerte);
+  --color-wi-borde-suave: var(--wi-borde-suave);
+  --color-wi-superficie: var(--wi-superficie);
+  --color-wi-lienzo: var(--wi-lienzo);
+  --color-wi-hover: var(--wi-hover);
+  --color-wi-dato-1: var(--wi-dato-1);
+  --color-wi-dato-2: var(--wi-dato-2);
+  --color-wi-dato-3: var(--wi-dato-3);
+  --color-wi-dato-4: var(--wi-dato-4);
+  --color-wi-dato-riel: var(--wi-dato-riel);
+  --color-wi-accion: var(--wi-accion);
+  --color-wi-accion-fondo: var(--wi-accion-fondo);
+  --color-wi-accion-linea: var(--wi-accion-linea);
+  --color-wi-riesgo: var(--wi-riesgo);
+  --color-wi-riesgo-fondo: var(--wi-riesgo-fondo);
+  --color-wi-riesgo-linea: var(--wi-riesgo-linea);
+  --color-wi-ok: var(--wi-ok);
+  --color-wi-ok-fondo: var(--wi-ok-fondo);
+  --color-wi-ok-linea: var(--wi-ok-linea);
+  --color-wi-neutro: var(--wi-neutro);
+  --color-wi-neutro-fondo: var(--wi-neutro-fondo);
+  --color-wi-neutro-linea: var(--wi-neutro-linea);
+
+  --spacing: initial;
+  --spacing-*: initial;
+  --spacing-0: 0px;
+  --spacing-1: var(--wi-e-1);
+  --spacing-2: var(--wi-e-2);
+  --spacing-3: var(--wi-e-3);
+  --spacing-4: var(--wi-e-4);
+  --spacing-5: var(--wi-e-5);
+  --spacing-6: var(--wi-e-6);
+  --spacing-7: var(--wi-e-7);
+  --spacing-8: var(--wi-e-8);
+
+  --font-*: initial;
+  --font-sans: var(--wi-fuente);
+
+  --text-*: initial;
+  --text-portada: var(--wi-t-portada);
+  --text-pantalla: var(--wi-t-pantalla);
+  --text-seccion: var(--wi-t-seccion);
+  --text-tarjeta: var(--wi-t-tarjeta);
+  --text-cuerpo: var(--wi-t-cuerpo);
+  --text-nav: var(--wi-t-nav);
+  --text-tabla: var(--wi-t-tabla);
+  --text-apoyo: var(--wi-t-apoyo);
+  --text-antetitulo: var(--wi-t-antetitulo);
+
+  --radius-*: initial;
+  --radius-control: var(--wi-r-control);
+  --radius-nav: var(--wi-r-nav);
+  --radius-tarjeta: var(--wi-r-tarjeta);
+  --radius-pildora: var(--wi-r-pildora);
+
+  /* Sin sombras decorativas: solo lo que flota (modal, desplegable, tooltip) la define aparte. */
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+
+  --breakpoint-*: initial;
+  --breakpoint-amplio: 1100px;
+
+  --container-*: initial;
+  --container-contenido: var(--wi-contenido);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    font-family: var(--wi-fuente);
+    font-size: var(--wi-t-cuerpo);
+    line-height: 1.55;
+    color: var(--wi-texto);
+    background: var(--wi-lienzo);
+  }
+
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: none;
+    box-shadow: var(--wi-foco);
+  }
+
+  :where(input, select, textarea):focus-visible {
+    border-color: var(--wi-marca-pantalla);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Tabla Wise: densidad fija, sin cebra ni bordes verticales, cifras a la derecha. */
+@layer components {
+  .wi-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--wi-t-tabla);
+  }
+  .wi-tabla th {
+    background: var(--wi-lienzo);
+    color: var(--wi-secundario);
+    font-weight: 500;
+    font-size: var(--wi-t-apoyo);
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--wi-borde);
+    text-align: left;
+  }
+  .wi-tabla td {
+    padding: 6px 10px;
+    height: var(--wi-fila);
+    border-bottom: 1px solid var(--wi-borde-suave);
+    transition: background-color var(--wi-transicion);
+  }
+  .wi-tabla :is(td, th).num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .wi-tabla tbody tr:hover td {
+    background: var(--wi-hover);
+  }
+  .wi-tabla tbody tr:hover td:first-child {
+    box-shadow: inset 2px 0 0 var(--wi-marca-pantalla);
+  }
 }
