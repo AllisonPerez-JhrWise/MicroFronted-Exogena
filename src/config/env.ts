@@ -5,12 +5,17 @@ import { z } from "zod";
 const envSchema = z.object({
   NEXT_PUBLIC_BASE_PATH: z.string().default(""),
   NEXT_PUBLIC_API_BASE_URL: z.url(),
+  NEXT_PUBLIC_RUT_API_BASE_URL: z.url(),
+  /** "false" = no se llama a la API del RUT; se usan datos de ejemplo (solo mientras la API no exista). */
+  NEXT_PUBLIC_RUT_VALIDACION: z.enum(["true", "false"]).default("true"),
   NEXT_PUBLIC_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
 });
 
 const parsed = envSchema.safeParse({
   NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH,
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  NEXT_PUBLIC_RUT_API_BASE_URL: process.env.NEXT_PUBLIC_RUT_API_BASE_URL,
+  NEXT_PUBLIC_RUT_VALIDACION: process.env.NEXT_PUBLIC_RUT_VALIDACION,
   NEXT_PUBLIC_API_TIMEOUT_MS: process.env.NEXT_PUBLIC_API_TIMEOUT_MS,
 });
 
@@ -23,5 +28,7 @@ if (!parsed.success) {
 export const env = {
   basePath: parsed.data.NEXT_PUBLIC_BASE_PATH,
   apiBaseUrl: parsed.data.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, ""),
+  rutApiBaseUrl: parsed.data.NEXT_PUBLIC_RUT_API_BASE_URL.replace(/\/+$/, ""),
+  rutValidacionHabilitada: parsed.data.NEXT_PUBLIC_RUT_VALIDACION === "true",
   apiTimeoutMs: parsed.data.NEXT_PUBLIC_API_TIMEOUT_MS,
 } as const;

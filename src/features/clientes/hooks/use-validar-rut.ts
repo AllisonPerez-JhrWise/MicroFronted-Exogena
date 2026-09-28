@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { clientesService } from "../api/clientes.service";
+import { rutService } from "../api/rut.service";
 
 export function useValidarRut() {
-  return useMutation({ mutationFn: clientesService.validarRut });
+  return useMutation({ mutationFn: rutService.validar });
 }

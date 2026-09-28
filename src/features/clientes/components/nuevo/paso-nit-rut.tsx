@@ -1,11 +1,12 @@
 "use client";
 
-import { useId, useState, type DragEvent, type FormEvent } from "react";
+import { useId, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { MensajeError } from "@/shared/components/query-state";
-import { formatTamano } from "@/shared/lib/format";
+import { formatNit, formatTamano } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/button";
 import { Campo } from "@/shared/ui/campo";
 import { IconoSubir } from "@/shared/ui/iconos";
+import { Mensaje } from "@/shared/ui/mensaje";
 import { useValidarRut } from "../../hooks/use-validar-rut";
 import { NIT_DIGITOS, RUT_MAX_BYTES, type RutValidado } from "../../schemas/rut.schema";
 
@@ -18,19 +19,60 @@ function errorDeArchivo(archivo: File): string | null {
   return null;
 }
 
-interface PasoNitRutProps {
-  onCancelar: () => void;
-  onValidado: (rut: RutValidado) => void;
+/** Bloqueo cuando el NIT digitado no es el del RUT: muestra ambos para compararlos. */
+function NitNoCoincide({ id, nit, rut }: { id: string; nit: string; rut: RutValidado }) {
+  const caja = "rounded-control border border-wi-riesgo-linea bg-wi-superficie p-3";
+  return (
+    <div id={id}>
+      <Mensaje nivel="bloqueo" titulo="El NIT digitado no coincide con el del RUT">
+        <p>Corrige el NIT o carga el RUT de esta empresa. El cliente no se puede crear hasta que coincidan.</p>
+        <dl className="mt-3 grid grid-cols-2 gap-3">
+          <div className={caja}>
+            <dt className="text-wi-tinta">NIT digitado</dt>
+            <dd className="text-wi-secundario tabular-nums">{formatNit(nit)}</dd>
+          </div>
+          <div className={caja}>
+            <dt className="text-wi-tinta">NIT del RUT</dt>
+            <dd className="text-wi-secundario">
+              <span className="tabular-nums">{formatNit(rut.nit, rut.digitoVerificacion)}</span> · {rut.razonSocial}
+            </dd>
+          </div>
+        </dl>
+      </Mensaje>
+    </div>
+  );
 }
 
-export function PasoNitRut({ onCancelar, onValidado }: PasoNitRutProps) {
+export interface ResultadoPasoNitRut {
+  nit: string;
+  archivo: File;
+  rut: RutValidado;
+}
+
+interface PasoNitRutProps {
+  /** Valores con los que se vuelve a este paso desde «Atrás». */
+  nitInicial?: string;
+  archivoInicial?: File | null;
+  onCancelar: () => void;
+  onValidado: (resultado: ResultadoPasoNitRut) => void;
+}
+
+export function PasoNitRut({ nitInicial = "", archivoInicial = null, onCancelar, onValidado }: PasoNitRutProps) {
   const id = useId();
-  const [nit, setNit] = useState("");
+  const [nit, setNit] = useState(nitInicial);
   const [nitTocado, setNitTocado] = useState(false);
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [archivo, setArchivo] = useState<File | null>(archivoInicial);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
+  /** RUT leído cuyo NIT no coincide con el digitado. Se limpia al cambiar el NIT o el archivo. */
+  const [noCoincide, setNoCoincide] = useState<RutValidado | null>(null);
+  const inputArchivo = useRef<HTMLInputElement>(null);
   const validar = useValidarRut();
+
+  const limpiarResultado = () => {
+    validar.reset();
+    setNoCoincide(null);
+  };
 
   const nitCompleto = nit.length === NIT_DIGITOS;
   const errorNit =
@@ -44,7 +86,7 @@ export function PasoNitRut({ onCancelar, onValidado }: PasoNitRutProps) {
 
   const elegirArchivo = (elegido: File | undefined) => {
     if (!elegido) return;
-    validar.reset();
+    limpiarResultado();
     const error = errorDeArchivo(elegido);
     setErrorArchivo(error);
     setArchivo(error ? null : elegido);
@@ -59,13 +101,22 @@ export function PasoNitRut({ onCancelar, onValidado }: PasoNitRutProps) {
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     if (!nitCompleto || !archivo) return;
-    validar.mutate({ nit, archivo }, { onSuccess: onValidado });
+    validar.mutate(
+      { nit, archivo },
+      {
+        // Si no coinciden, se queda en este paso: el cliente no se puede crear así.
+        onSuccess: (rut) => (rut.nitCoincide ? onValidado({ nit, archivo, rut }) : setNoCoincide(rut)),
+      },
+    );
   };
+
+  const idNoCoincide = `${id}-no-coincide`;
+  const nitInvalido = Boolean(errorNit || noCoincide);
 
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-5">
       <div>
-        <label htmlFor={`${id}-nit`} className="mb-1 block font-medium text-wi-secundario">
+        <label htmlFor={`${id}-nit`} className="mb-1 block font-medium text-wi-tinta">
           NIT, sin dígito de verificación
         </label>
         <Campo
@@ -75,13 +126,13 @@ export function PasoNitRut({ onCancelar, onValidado }: PasoNitRutProps) {
           maxLength={NIT_DIGITOS}
           value={nit}
           onChange={(e) => {
-            validar.reset();
+            limpiarResultado();
             setNit(e.target.value.replace(/\D/g, ""));
           }}
           onBlur={() => setNitTocado(true)}
-          aria-invalid={Boolean(errorNit)}
-          aria-describedby={errorNit ? `${id}-nit-error` : undefined}
-          className={errorNit ? "border-wi-riesgo" : ""}
+          aria-invalid={nitInvalido}
+          aria-describedby={errorNit ? `${id}-nit-error` : noCoincide ? idNoCoincide : undefined}
+          className={nitInvalido ? "border-wi-riesgo" : ""}
           autoFocus
         />
         {errorNit && (
@@ -92,7 +143,7 @@ export function PasoNitRut({ onCancelar, onValidado }: PasoNitRutProps) {
       </div>
 
       <div>
-        <p id={`${id}-rut-etiqueta`} className="mb-1 font-medium text-wi-secundario">
+        <p id={`${id}-rut-etiqueta`} className="mb-1 font-medium text-wi-tinta">
           RUT en PDF
         </p>
         <label
@@ -111,6 +162,7 @@ export function PasoNitRut({ onCancelar, onValidado }: PasoNitRutProps) {
           <span className="font-semibold text-wi-tinta">Arrastra el RUT aquí o selecciónalo</span>
           <span className="text-apoyo text-wi-secundario">PDF hasta {formatTamano(RUT_MAX_BYTES)}</span>
           <input
+            ref={inputArchivo}
             id={`${id}-rut`}
             type="file"
             accept="application/pdf,.pdf"
@@ -140,28 +192,42 @@ export function PasoNitRut({ onCancelar, onValidado }: PasoNitRutProps) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-wi-tinta">{archivo.name}</p>
-              <p className="text-apoyo text-wi-secundario">{formatTamano(archivo.size)} · listo para validar</p>
+              <p className="text-apoyo text-wi-secundario">
+                {formatTamano(archivo.size)}
+                {!noCoincide && " · listo para validar"}
+              </p>
             </div>
-            <Button
-              variant="texto"
-              aria-label={`Quitar ${archivo.name}`}
-              onClick={() => {
-                validar.reset();
-                setArchivo(null);
-              }}
-            >
-              Quitar
-            </Button>
+            {noCoincide ? (
+              <Button variant="texto" onClick={() => inputArchivo.current?.click()}>
+                Cambiar archivo
+              </Button>
+            ) : (
+              <Button
+                variant="texto"
+                aria-label={`Quitar ${archivo.name}`}
+                onClick={() => {
+                  limpiarResultado();
+                  setArchivo(null);
+                }}
+              >
+                Quitar
+              </Button>
+            )}
           </div>
         )}
       </div>
 
+      {noCoincide && <NitNoCoincide id={idNoCoincide} nit={nit} rut={noCoincide} />}
       {validar.isError && <MensajeError error={validar.error} />}
 
       <div className="flex items-center justify-end gap-3">
         {motivoDeshabilitado && <p className="mr-auto text-apoyo text-wi-secundario">{motivoDeshabilitado}</p>}
         <Button onClick={onCancelar}>Cancelar</Button>
-        <Button type="submit" variant="principal" disabled={Boolean(motivoDeshabilitado) || validar.isPending}>
+        <Button
+          type="submit"
+          variant="principal"
+          disabled={Boolean(motivoDeshabilitado) || Boolean(noCoincide) || validar.isPending}
+        >
           {validar.isPending ? "Validando RUT…" : "Validar RUT"}
         </Button>
       </div>

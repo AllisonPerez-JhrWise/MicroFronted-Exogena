@@ -43,6 +43,14 @@ export function IconoSubir(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconoAtras(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icono {...props}>
+      <path d="M11.5 7h-9M6 3.5L2.5 7 6 10.5" />
+    </Icono>
+  );
+}
+
 export function IconoCheck(props: SVGProps<SVGSVGElement>) {
   return (
     <Icono {...props}>

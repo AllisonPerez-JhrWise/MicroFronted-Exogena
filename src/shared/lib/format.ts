@@ -3,6 +3,12 @@ const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "o
 /** Vacío en tabla o ficha: guion largo, nunca celda en blanco ni «N/A». */
 export const VACIO = "—";
 
+/** NIT con puntos de miles y dígito de verificación: «900.123.456-4». */
+export function formatNit(nit: string, digitoVerificacion?: string | null): string {
+  const conPuntos = nit.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return digitoVerificacion ? `${conPuntos}-${digitoVerificacion}` : conPuntos;
+}
+
 /** Tamaño de archivo legible: «820 KB», «1,4 MB». */
 export function formatTamano(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;

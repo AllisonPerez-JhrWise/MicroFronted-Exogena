@@ -24,8 +24,8 @@ export function setHeadersProvider(provider: typeof headersProvider) {
   headersProvider = provider;
 }
 
-function buildUrl(path: string, query?: Record<string, QueryValue>) {
-  const url = new URL(`${env.apiBaseUrl}/${path.replace(/^\/+/, "")}`);
+function buildUrl(baseUrl: string, path: string, query?: Record<string, QueryValue>) {
+  const url = new URL(`${baseUrl}/${path.replace(/^\/+/, "")}`);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
   }
@@ -38,7 +38,20 @@ async function readBody(response: Response) {
   return contentType.includes("application/json") ? response.json() : response.text();
 }
 
-export async function apiRequest<TSchema extends z.ZodType>(
+/** Crea el cliente de un microservicio: todos comparten timeout, errores y validación de contrato. */
+export function crearClienteApi(baseUrl: string) {
+  return <TSchema extends z.ZodType>(path: string, options: RequestOptions<TSchema>) =>
+    request(baseUrl, path, options);
+}
+
+/** Microservicio de clientes / Exógena. */
+export const apiRequest = crearClienteApi(env.apiBaseUrl);
+
+/** API del RUT: lectura y validación del PDF. */
+export const rutApiRequest = crearClienteApi(env.rutApiBaseUrl);
+
+async function request<TSchema extends z.ZodType>(
+  baseUrl: string,
   path: string,
   { method = "GET", schema, query, body, headers, signal, timeoutMs = env.apiTimeoutMs }: RequestOptions<TSchema>,
 ): Promise<z.infer<TSchema>> {
@@ -49,7 +62,7 @@ export async function apiRequest<TSchema extends z.ZodType>(
 
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, query), {
+    response = await fetch(buildUrl(baseUrl, path, query), {
       method,
       signal: finalSignal,
       headers: {
