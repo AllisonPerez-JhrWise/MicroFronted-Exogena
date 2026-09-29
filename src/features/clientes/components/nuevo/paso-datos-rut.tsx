@@ -8,20 +8,23 @@ import { Estado } from "@/shared/ui/estado";
 import { IconoAtras } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
 import {
+  NOTAS_MAX,
   organizacionSchema,
   type CampoOrganizacion,
   type Organizacion,
 } from "../../schemas/organizacion.schema";
-import type { RutValidado } from "../../schemas/rut.schema";
+import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
 
-const TIPO_PERSONA: Record<RutValidado["tipoPersona"], string> = {
-  JURIDICA: "Persona jurídica",
-  NATURAL: "Persona natural",
+const TIPO_PERSONA: Record<RutValidado["person_type"], string> = {
+  juridica: "Persona jurídica",
+  natural: "Persona natural",
 };
 
-const ESTADO_RUT: Record<RutValidado["estado"], { etiqueta: string; tono: "ok" | "neutro" }> = {
-  ACTIVO: { etiqueta: "Activo", tono: "ok" },
-  INACTIVO: { etiqueta: "Inactivo", tono: "neutro" },
+// «Activo» en verde según el mockup aprobado; suspendido pide atención; cancelado es riesgo.
+const ESTADO_RUT: Record<RutValidado["rut_status"], { etiqueta: string; tono: "ok" | "accion" | "riesgo" }> = {
+  activo: { etiqueta: "Activo", tono: "ok" },
+  suspendido: { etiqueta: "Suspendido", tono: "accion" },
+  cancelado: { etiqueta: "Cancelado", tono: "riesgo" },
 };
 
 const unir = (partes: (string | null | undefined)[], separador: string) =>
@@ -39,24 +42,21 @@ function EncabezadoColumna({ id, titulo, nota }: { id: string; titulo: string; n
 
 function DatosRut({ rut }: { rut: RutValidado }) {
   const filas: [string, ReactNode][] = [
-    ["NIT", <span key="nit" className="tabular-nums">{formatNit(rut.nit, rut.digitoVerificacion)}</span>],
-    ["Razón social", rut.razonSocial],
-    ["Tipo", TIPO_PERSONA[rut.tipoPersona]],
-    ["Dirección", rut.direccion ?? VACIO],
-    ["Ciudad", unir([rut.ciudad, rut.departamento], " · ")],
-    ["Correo", rut.correo ?? VACIO],
-    [
-      "Actividad principal",
-      rut.actividadPrincipal ? `${rut.actividadPrincipal.codigo} · ${rut.actividadPrincipal.descripcion}` : VACIO,
-    ],
-    ["Responsabilidades", unir(rut.responsabilidades.map((r) => `${r.codigo} · ${r.descripcion}`), ", ")],
+    ["NIT", <span key="nit" className="tabular-nums">{formatNit(rut.nit, rut.dv)}</span>],
+    [rut.person_type === "juridica" ? "Razón social" : "Nombre", nombreDelRut(rut) || VACIO],
+    ["Tipo", TIPO_PERSONA[rut.person_type]],
+    ["Dirección", rut.address ?? VACIO],
+    ["Ciudad", unir([rut.city_name, rut.department_name], " · ")],
+    ["Correo", rut.rut_email ?? VACIO],
+    ["Actividad principal", unir([rut.main_activity_code, rut.main_activity_description], " · ")],
+    ["Responsabilidades", unir(rut.tax_responsibilities.map((r) => `${r.code} · ${r.description}`), ", ")],
     [
       "Estado del RUT",
-      <Estado key="estado" tono={ESTADO_RUT[rut.estado].tono}>
-        {ESTADO_RUT[rut.estado].etiqueta}
+      <Estado key="estado" tono={ESTADO_RUT[rut.rut_status].tono}>
+        {ESTADO_RUT[rut.rut_status].etiqueta}
       </Estado>,
     ],
-    ["Actualizado", formatFecha(rut.actualizado)],
+    ["Actualizado", formatFecha(rut.rut_updated_at)],
   ];
 
   return (
@@ -112,7 +112,7 @@ const CAMPOS: {
   { campo: "contactoPrincipal", etiqueta: "Contacto principal", props: { autoComplete: "name" } },
   { campo: "correoContacto", etiqueta: "Correo de contacto", props: { type: "email", autoComplete: "email" } },
   { campo: "telefono", etiqueta: "Teléfono", props: { type: "tel", autoComplete: "tel", inputMode: "tel" } },
-  { campo: "notas", etiqueta: "Notas", props: { placeholder: "Opcional" } },
+  { campo: "notas", etiqueta: "Notas", props: { placeholder: "Opcional", maxLength: NOTAS_MAX } },
 ];
 
 function errorDe(campo: CampoOrganizacion, valor: string) {
@@ -154,8 +154,8 @@ export function PasoDatosRut({ rut, organizacionInicial, onAtras, onSiguiente }:
     if (primero) document.getElementById(`${id}-${primero.campo}`)?.focus();
   };
 
-  const fecha = rut.actualizado ? `, actualizado el ${formatFecha(rut.actualizado)}` : "";
-  const estadoTexto = ESTADO_RUT[rut.estado].etiqueta.toLowerCase();
+  const fecha = rut.rut_updated_at ? `, actualizado el ${formatFecha(rut.rut_updated_at)}` : "";
+  const estadoTexto = ESTADO_RUT[rut.rut_status].etiqueta.toLowerCase();
 
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-5">

@@ -1,13 +1,16 @@
-import type { InputHTMLAttributes, LabelHTMLAttributes } from "react";
+import type { InputHTMLAttributes, LabelHTMLAttributes, SelectHTMLAttributes } from "react";
+
+const CONTROL =
+  "h-7 w-full rounded-control border border-wi-borde-fuerte bg-wi-superficie text-cuerpo text-wi-tinta transition-colors duration-150 disabled:opacity-45";
 
 /** Campo de texto Wise: 13 px, relleno 7 px 10 px, alto 32 px, radio 6 px. */
 export function Campo({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={`h-7 w-full rounded-control border border-wi-borde-fuerte bg-wi-superficie px-[10px] py-[7px] text-cuerpo text-wi-tinta placeholder:text-wi-tenue transition-colors duration-150 disabled:opacity-45 ${className}`}
-      {...props}
-    />
-  );
+  return <input className={`${CONTROL} px-[10px] py-[7px] placeholder:text-wi-tenue ${className}`} {...props} />;
+}
+
+/** Selector con la misma forma que el campo de texto. */
+export function Selector({ className = "", ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={`${CONTROL} px-2 ${className}`} {...props} />;
 }
 
 export function Etiqueta({ className = "", ...props }: LabelHTMLAttributes<HTMLLabelElement>) {

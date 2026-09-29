@@ -8,7 +8,7 @@ import { Campo } from "@/shared/ui/campo";
 import { IconoSubir } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
 import { useValidarRut } from "../../hooks/use-validar-rut";
-import { NIT_DIGITOS, RUT_MAX_BYTES, type RutValidado } from "../../schemas/rut.schema";
+import { NIT_DIGITOS, nombreDelRut, RUT_MAX_BYTES, type RutValidado } from "../../schemas/rut.schema";
 
 function errorDeArchivo(archivo: File): string | null {
   const esPdf = archivo.type === "application/pdf" || archivo.name.toLowerCase().endsWith(".pdf");
@@ -34,7 +34,7 @@ function NitNoCoincide({ id, nit, rut }: { id: string; nit: string; rut: RutVali
           <div className={caja}>
             <dt className="text-wi-tinta">NIT del RUT</dt>
             <dd className="text-wi-secundario">
-              <span className="tabular-nums">{formatNit(rut.nit, rut.digitoVerificacion)}</span> · {rut.razonSocial}
+              <span className="tabular-nums">{formatNit(rut.nit, rut.dv)}</span> · {nombreDelRut(rut)}
             </dd>
           </div>
         </dl>
@@ -105,7 +105,7 @@ export function PasoNitRut({ nitInicial = "", archivoInicial = null, onCancelar,
       { nit, archivo },
       {
         // Si no coinciden, se queda en este paso: el cliente no se puede crear así.
-        onSuccess: (rut) => (rut.nitCoincide ? onValidado({ nit, archivo, rut }) : setNoCoincide(rut)),
+        onSuccess: (rut) => (rut.nit_matches ? onValidado({ nit, archivo, rut }) : setNoCoincide(rut)),
       },
     );
   };
