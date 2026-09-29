@@ -16,11 +16,11 @@ const PAGE_SIZE = 50;
 export function ClientesVista() {
   const { filtros, page, actualizar, limpiar, irAPagina } = useFiltrosClientes();
   const { esVisible, alternar } = useColumnasVisibles(COLUMNAS_CLIENTE);
-  const { data, error, isPending, isFetching, refetch } = useClientes({ ...filtros, page, pageSize: PAGE_SIZE });
+  const { data, error, isPending, isFetching, refetch } = useClientes({ ...filtros, page, size: PAGE_SIZE });
 
   const columnas = COLUMNAS_CLIENTE.filter(esVisible);
   const hayFiltros = Object.values(filtros).some((v) => v !== undefined);
-  const totalPaginas = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const totalPaginas = data ? Math.max(1, data.pages) : 1;
 
   return (
     <>
@@ -76,7 +76,7 @@ export function ClientesVista() {
                     <td className="text-right">
                       <Link
                         href={`/clientes/${encodeURIComponent(cliente.id)}`}
-                        aria-label={`Ver ${cliente.empresa}`}
+                        aria-label={`Ver ${cliente.display_name}`}
                         className={buttonClasses("texto")}
                       >
                         Ver

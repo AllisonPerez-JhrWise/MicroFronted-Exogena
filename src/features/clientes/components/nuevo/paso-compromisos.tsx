@@ -7,8 +7,8 @@ import { Button } from "@/shared/ui/button";
 import { Campo, Selector } from "@/shared/ui/campo";
 import { IconoAtras, IconoMas } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
-import { useObligaciones, useSocios, useTiposServicio } from "../../hooks/use-catalogos";
-import type { Compromiso } from "../../schemas/compromiso.schema";
+import { useMiembros, useObligaciones, useTiposServicio } from "../../hooks/use-catalogos";
+import type { Compromiso, PersonaEquipo } from "../../schemas/compromiso.schema";
 
 /** Años gravables que se ofrecen: el anterior (por defecto), dos atrás y el actual. */
 function aniosGravables() {
@@ -24,6 +24,32 @@ interface FilaNuevaProps {
   onCancelar: () => void;
 }
 
+interface SelectorEquipoProps {
+  etiqueta: string;
+  consulta: { data?: PersonaEquipo[]; isPending: boolean; isError: boolean };
+  value: string;
+  onChange: (id: string) => void;
+}
+
+/** Selector de una persona del equipo (socio, gerente). Opcional: si el catálogo falla, queda deshabilitado. */
+function SelectorEquipo({ etiqueta, consulta, value, onChange }: SelectorEquipoProps) {
+  return (
+    <Selector
+      aria-label={etiqueta}
+      value={value}
+      disabled={consulta.isPending || consulta.isError}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">{consulta.isPending ? "Cargando…" : consulta.isError ? "No disponible" : "Elige"}</option>
+      {consulta.data?.map((p) => (
+        <option key={p.user_id} value={p.user_id}>
+          {p.full_name}
+        </option>
+      ))}
+    </Selector>
+  );
+}
+
 /** Fila editable al final de la tabla para agregar un compromiso. */
 function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaProps) {
   const id = useId();
@@ -33,14 +59,18 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
   const [anio, setAnio] = useState(anios[1]);
   const [vencimiento, setVencimiento] = useState("");
   const [socioId, setSocioId] = useState("");
+  const [gerenteId, setGerenteId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const obligaciones = useObligaciones();
   const tipos = useTiposServicio(obligacionId || null);
-  const socios = useSocios();
+  const socios = useMiembros("socio");
+  const gerentes = useMiembros("gerente");
   const obligacion = obligaciones.data?.find((o) => o.id === obligacionId);
   const tipo = tipos.data?.find((t) => t.id === tipoId);
-  const socio = socios.data?.find((s) => s.id === socioId);
+  const socio = socios.data?.find((s) => s.user_id === socioId);
+  const gerente = gerentes.data?.find((g) => g.user_id === gerenteId);
+  const equipoNoDisponible = [socios.isError && "socios", gerentes.isError && "gerentes"].filter(Boolean);
   const sinServicios = Boolean(obligacionId) && tipos.data?.length === 0;
 
   const guardar = () => {
@@ -60,8 +90,10 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
       serviceId: tipo.service_id,
       anioGravable: anio,
       vencimiento: vencimiento || null,
-      socioId: socio?.id ?? null,
-      socioNombre: socio?.name ?? null,
+      socioId: socio?.user_id ?? null,
+      socioNombre: socio?.full_name ?? null,
+      gerenteId: gerente?.user_id ?? null,
+      gerenteNombre: gerente?.full_name ?? null,
     });
   };
 
@@ -73,7 +105,7 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
   if (obligaciones.isError) {
     return (
       <tr>
-        <td colSpan={6}>
+        <td colSpan={7}>
           <MensajeError error={obligaciones.error} onRetry={() => obligaciones.refetch()} />
         </td>
       </tr>
@@ -140,26 +172,15 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
           />
         </td>
         <td>
-          <Selector
-            aria-label="Socio"
-            value={socioId}
-            disabled={socios.isPending || socios.isError}
-            onChange={(e) => cambio(setSocioId)(e.target.value)}
-          >
-            <option value="">
-              {socios.isPending ? "Cargando…" : socios.isError ? "No disponible" : "Elige el socio"}
-            </option>
-            {socios.data?.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Selector>
+          <SelectorEquipo etiqueta="Socio" consulta={socios} value={socioId} onChange={cambio(setSocioId)} />
+        </td>
+        <td>
+          <SelectorEquipo etiqueta="Gerente" consulta={gerentes} value={gerenteId} onChange={cambio(setGerenteId)} />
         </td>
         <td />
       </tr>
       <tr>
-        <td colSpan={6}>
+        <td colSpan={7}>
           <div className="flex items-center justify-end gap-3">
             <p id={`${id}-error`} role={error ? "alert" : undefined} className="mr-auto text-apoyo">
               {error ? (
@@ -168,9 +189,10 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
                 <span className="text-wi-secundario">Esta obligación aún no tiene servicios disponibles.</span>
               ) : tipos.isError ? (
                 <span className="text-wi-riesgo">No se pudieron cargar los tipos de servicio. Elige de nuevo la obligación.</span>
-              ) : socios.isError ? (
+              ) : equipoNoDisponible.length ? (
                 <span className="text-wi-secundario">
-                  No se pudo cargar la lista de socios; puedes guardar el compromiso sin socio.
+                  No se pudo cargar la lista de {equipoNoDisponible.join(" ni de ")}; puedes guardar el compromiso sin
+                  ellos.
                 </span>
               ) : obligacion && !obligacion.requires_due_date ? (
                 <span className="text-wi-secundario">El vencimiento es opcional para esta obligación.</span>
@@ -219,6 +241,7 @@ export function PasoCompromisos({ compromisosIniciales, onAtras, onOmitir, onSig
                   Vencimiento
                 </th>
                 <th scope="col">Socio</th>
+                <th scope="col">Gerente</th>
                 <th scope="col">
                   <span className="sr-only">Acciones</span>
                 </th>
@@ -232,6 +255,7 @@ export function PasoCompromisos({ compromisosIniciales, onAtras, onOmitir, onSig
                   <td className="num">{c.anioGravable}</td>
                   <td className="num">{c.vencimiento ? formatFecha(c.vencimiento) : VACIO}</td>
                   <td>{c.socioNombre ?? VACIO}</td>
+                  <td>{c.gerenteNombre ?? VACIO}</td>
                   <td className="text-right">
                     <Button
                       variant="texto"

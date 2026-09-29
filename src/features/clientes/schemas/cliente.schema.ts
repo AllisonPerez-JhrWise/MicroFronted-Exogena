@@ -1,30 +1,38 @@
 import { z } from "zod";
 
-// PROVISIONAL: contrato supuesto hasta tener el del microservicio. Al recibirlo,
-// solo deberían cambiar este archivo y api/clientes.service.ts.
+// Pantalla de clientes: una fila por empresa (NIT). back_exogena · GET /companies.
 
-export const ESTADOS_CLIENTE = ["ACTIVO", "INACTIVO", "RUT_POR_RENOVAR"] as const;
+export const ESTADOS_CLIENTE = ["activo", "inactivo", "rut_por_renovar"] as const;
 export const estadoClienteSchema = z.enum(ESTADOS_CLIENTE);
 export type EstadoCliente = z.infer<typeof estadoClienteSchema>;
 
 export const clienteSchema = z.object({
   id: z.string(),
-  empresa: z.string(),
+  client_id: z.string(),
+  /** Nombre de la empresa (columna «Empresa»). */
+  display_name: z.string(),
+  trade_name: z.string().nullable(),
   nit: z.string(),
-  grupo: z.string().nullable(),
-  compromisosActivos: z.number().int().nonnegative(),
-  /** Fecha del RUT vigente (YYYY-MM-DD); null si no se ha identificado. */
-  rutActualizado: z.string().nullable(),
-  /** Línea de apoyo bajo la fecha, p. ej. «Generado hace 14 meses». */
-  rutNota: z.string().nullable(),
-  estado: estadoClienteSchema,
+  dv: z.string().nullable(),
+  /** Nombre del grupo; null si el cliente tiene una sola empresa. */
+  group: z.string().nullable(),
+  /** Compromisos por iniciar o en curso. */
+  active_engagements: z.number().int().nonnegative(),
+  /** Fecha de generación del RUT (YYYY-MM-DD). */
+  rut_generated_at: z.string().nullable(),
+  /** Fecha de actualización del RUT (YYYY-MM-DD). */
+  rut_updated_at: z.string().nullable(),
+  /** true = la fecha del RUT no se pudo identificar. */
+  rut_date_unknown: z.boolean(),
+  status: estadoClienteSchema,
 });
 
 export const clientesPageSchema = z.object({
   items: z.array(clienteSchema),
   total: z.number(),
   page: z.number(),
-  pageSize: z.number(),
+  size: z.number(),
+  pages: z.number(),
 });
 
 export type Cliente = z.infer<typeof clienteSchema>;

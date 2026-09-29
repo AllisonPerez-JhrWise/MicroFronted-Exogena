@@ -1,17 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/shared/ui/button";
-import { IconoAtras, IconoCerrar } from "@/shared/ui/iconos";
+import { IconoCerrar } from "@/shared/ui/iconos";
 import { IndicadorPasos } from "@/shared/ui/indicador-pasos";
+import type { ClienteExistente } from "../../schemas/cliente-existente.schema";
 import type { Compromiso } from "../../schemas/compromiso.schema";
 import { ORGANIZACION_VACIA, type Organizacion } from "../../schemas/organizacion.schema";
 import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
+import type { ClienteCreado } from "../../schemas/usuario.schema";
 import { PasoCompromisos } from "./paso-compromisos";
 import { PasoDatosRut } from "./paso-datos-rut";
 import { PasoNitRut } from "./paso-nit-rut";
+import { PasoUsuarios, type DatosPasoUsuarios } from "./paso-usuarios";
 
 const PASOS = ["NIT y RUT", "Datos del RUT", "Compromisos", "Usuarios del cliente"] as const;
+
+// Ancho del contenido por paso: compromisos y usuarios tienen tablas con más columnas.
+const ANCHO_PASO = ["w-[672px]", "w-[672px]", "w-[812px]", "w-[812px]"] as const;
 
 /** Lo diligenciado en todos los pasos; se conserva al ir y volver entre ellos. */
 interface DatosNuevoCliente {
@@ -19,12 +24,16 @@ interface DatosNuevoCliente {
   archivo: File | null;
   rut: RutValidado | null;
   organizacion: Organizacion;
+  /** Cliente existente (grupo) al que se asocia la empresa; null = cliente nuevo. */
+  clienteExistente: ClienteExistente | null;
   compromisos: Compromiso[];
+  usuarios: DatosPasoUsuarios;
 }
 
 interface NuevoClienteFlujoProps {
   tituloId: string;
   onCerrar: () => void;
+  onCreado: (cliente: ClienteCreado) => void;
 }
 
 /**
@@ -32,14 +41,16 @@ interface NuevoClienteFlujoProps {
  * (hoy, la ventana que abre «Nuevo cliente»). El paso en curso vive en memoria:
  * no hay URL para entrar directo a un paso.
  */
-export function NuevoClienteFlujo({ tituloId, onCerrar }: NuevoClienteFlujoProps) {
+export function NuevoClienteFlujo({ tituloId, onCerrar, onCreado }: NuevoClienteFlujoProps) {
   const [paso, setPaso] = useState(0);
   const [datos, setDatos] = useState<DatosNuevoCliente>({
     nit: "",
     archivo: null,
     rut: null,
     organizacion: ORGANIZACION_VACIA,
+    clienteExistente: null,
     compromisos: [],
+    usuarios: { incluirContacto: true, cargoContacto: "", usuarios: [] },
   });
 
   /** Guarda lo diligenciado en un paso y pasa a otro. */
@@ -52,7 +63,7 @@ export function NuevoClienteFlujo({ tituloId, onCerrar }: NuevoClienteFlujoProps
   const titulo = paso >= 2 && datos.rut ? `Nuevo cliente · ${nombreDelRut(datos.rut)}` : "Nuevo cliente";
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className={`flex max-w-full flex-col gap-5 ${ANCHO_PASO[paso]}`}>
       <header className="flex items-start justify-between gap-5">
         <div className="flex flex-col gap-2">
           <h2 id={tituloId} className="text-pantalla font-semibold tracking-[-0.01em] text-wi-tinta">
@@ -83,8 +94,9 @@ export function NuevoClienteFlujo({ tituloId, onCerrar }: NuevoClienteFlujoProps
         <PasoDatosRut
           rut={datos.rut}
           organizacionInicial={datos.organizacion}
-          onAtras={(organizacion) => irA(0, { organizacion })}
-          onSiguiente={(organizacion) => irA(2, { organizacion })}
+          clienteExistenteInicial={datos.clienteExistente}
+          onAtras={(cambios) => irA(0, cambios)}
+          onSiguiente={(cambios) => irA(2, cambios)}
         />
       )}
 
@@ -97,17 +109,16 @@ export function NuevoClienteFlujo({ tituloId, onCerrar }: NuevoClienteFlujoProps
         />
       )}
 
-      {paso >= 3 && (
-        // Paso 4: aún sin contenido.
-        <div className="flex flex-col gap-5">
-          <p className="text-wi-secundario">El paso «{PASOS[paso]}» todavía no está disponible.</p>
-          <div className="flex justify-end gap-3">
-            <Button onClick={() => setPaso(paso - 1)}>
-              <IconoAtras />
-              Atrás
-            </Button>
-          </div>
-        </div>
+      {paso === 3 && datos.rut && (
+        <PasoUsuarios
+          rut={datos.rut}
+          organizacion={datos.organizacion}
+          clienteExistente={datos.clienteExistente}
+          compromisos={datos.compromisos}
+          datosIniciales={datos.usuarios}
+          onIrAPaso={(paso, usuarios) => irA(paso, { usuarios })}
+          onCreado={onCreado}
+        />
       )}
     </div>
   );

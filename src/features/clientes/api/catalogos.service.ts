@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/http/api-client";
-import { obligacionSchema, socioSchema, tipoServicioSchema } from "../schemas/compromiso.schema";
+import {
+  obligacionSchema,
+  personaEquipoSchema,
+  tipoServicioSchema,
+  type RolEquipo,
+} from "../schemas/compromiso.schema";
 
 export const catalogosService = {
   obligaciones: (signal?: AbortSignal) =>
@@ -13,6 +18,7 @@ export const catalogosService = {
       signal,
     }),
 
-  // PROVISIONAL: GET /partners aún no existe; ajustar ruta y esquema cuando se publique.
-  socios: (signal?: AbortSignal) => apiRequest("/partners", { schema: z.array(socioSchema), signal }),
+  /** Personas de la firma con ese rol y membresía activa (selectores de socio y gerente). */
+  miembros: (role: RolEquipo, signal?: AbortSignal) =>
+    apiRequest("/members", { schema: z.array(personaEquipoSchema), query: { role }, signal }),
 };

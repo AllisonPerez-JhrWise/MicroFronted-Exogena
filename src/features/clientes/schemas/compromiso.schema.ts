@@ -18,19 +18,21 @@ export const tipoServicioSchema = z.object({
   service_id: z.string(),
 });
 
-// PROVISIONAL: GET /partners aún no existe en back_exogena; ruta y campos supuestos.
-export const socioSchema = z.object({
-  id: z.string(),
-  name: z.string(),
+/** Persona de la firma con un rol (GET /members?role=socio|gerente). */
+export const personaEquipoSchema = z.object({
+  user_id: z.string(),
+  full_name: z.string(),
+  email: z.string(),
 });
 
+export type RolEquipo = "socio" | "gerente";
 export type Obligacion = z.infer<typeof obligacionSchema>;
 export type TipoServicio = z.infer<typeof tipoServicioSchema>;
-export type Socio = z.infer<typeof socioSchema>;
+export type PersonaEquipo = z.infer<typeof personaEquipoSchema>;
 
 /**
- * Compromiso armado en el paso 3. Por ahora vive solo en memoria: crear compromisos
- * todavía no está disponible en back_exogena. Guarda los nombres para mostrarlos en la tabla.
+ * Compromiso armado en el paso 3. Se envía en `engagements` de POST /clients.
+ * Guarda los nombres solo para mostrarlos en la tabla.
  */
 export interface Compromiso {
   /** Identificador local de la fila. */
@@ -44,4 +46,6 @@ export interface Compromiso {
   vencimiento: string | null;
   socioId: string | null;
   socioNombre: string | null;
+  gerenteId: string | null;
+  gerenteNombre: string | null;
 }

@@ -31,7 +31,8 @@ export function Modal({ tituloId, onCerrar, children }: ModalProps) {
         e.preventDefault();
         onCerrar();
       }}
-      className="m-auto w-[calc(100%-32px)] max-w-[720px] rounded-tarjeta border border-wi-borde bg-wi-superficie p-6 text-cuerpo text-wi-texto backdrop:bg-wi-tinta/40"
+      // El ancho lo define el contenido; nunca más que la pantalla menos 16 px por lado.
+      className="m-auto w-fit max-w-[calc(100%-32px)] rounded-tarjeta border border-wi-borde bg-wi-superficie p-6 text-cuerpo text-wi-texto backdrop:bg-wi-tinta/40"
     >
       {children}
     </dialog>
