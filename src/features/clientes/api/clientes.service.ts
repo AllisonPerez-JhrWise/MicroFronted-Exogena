@@ -3,6 +3,7 @@ import { apiRequest } from "@/lib/http/api-client";
 import { clientesPageSchema, type ClientesFiltros } from "../schemas/cliente.schema";
 import { grupoSchema, nitCheckSchema, type SeleccionGrupo } from "../schemas/grupo.schema";
 import type { Compromiso } from "../schemas/compromiso.schema";
+import { fichaEmpresaSchema } from "../schemas/ficha.schema";
 import type { Organizacion } from "../schemas/organizacion.schema";
 import type { RutValidado } from "../schemas/rut.schema";
 import { clienteCreadoSchema, type Usuario } from "../schemas/usuario.schema";
@@ -92,6 +93,10 @@ export const clientesService = {
       },
       signal,
     }),
+
+  /** Ficha de la empresa. 404 si no existe o quien consulta no puede verla. */
+  ficha: (id: string, signal?: AbortSignal) =>
+    apiRequest(`/companies/${encodeURIComponent(id)}`, { schema: fichaEmpresaSchema, signal }),
 
   /** Paso 1: ¿el NIT ya está registrado? (listo; su interfaz espera mockup). */
   nitCheck: (nit: string, signal?: AbortSignal) =>

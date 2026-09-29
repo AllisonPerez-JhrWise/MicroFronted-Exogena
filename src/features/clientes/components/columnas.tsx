@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { formatFecha, formatNit, VACIO } from "@/shared/lib/format";
-import { Estado, type EstadoTono } from "@/shared/ui/estado";
+import { Estado, tonoEstado, type EstadoTono } from "@/shared/ui/estado";
 import type { Cliente, EstadoCliente } from "../schemas/cliente.schema";
 
-// Solo tiene color lo que pide algo: «RUT por renovar» pide acción; «Activo» e «Inactivo» no.
+// Color según la regla de cápsulas del proyecto (ver tonoEstado).
 export const ESTADO_CLIENTE: Record<EstadoCliente, { etiqueta: string; tono: EstadoTono }> = {
-  activo: { etiqueta: "Activo", tono: "neutro" },
-  inactivo: { etiqueta: "Inactivo", tono: "neutro" },
-  rut_por_renovar: { etiqueta: "RUT por renovar", tono: "accion" },
+  activo: { etiqueta: "Activo", tono: tonoEstado("activo") },
+  inactivo: { etiqueta: "Inactivo", tono: tonoEstado("inactivo") },
+  rut_por_renovar: { etiqueta: "RUT por renovar", tono: tonoEstado("rut_por_renovar") },
 };
 
 /** Meses completos entre una fecha (YYYY-MM-DD) y hoy. */

@@ -1,0 +1,311 @@
+"use client";
+
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { ApiError } from "@/lib/http/api-error";
+import { MensajeError } from "@/shared/components/query-state";
+import { formatFecha, formatNit, VACIO } from "@/shared/lib/format";
+import { Button, buttonClasses } from "@/shared/ui/button";
+import { Estado, tonoEstado } from "@/shared/ui/estado";
+import { IconoMas } from "@/shared/ui/iconos";
+import { Mensaje } from "@/shared/ui/mensaje";
+import { useFichaEmpresa } from "../../hooks/use-ficha-empresa";
+import { nombreResponsabilidad } from "../../lib/responsabilidades";
+import type { EstadoCliente } from "../../schemas/cliente.schema";
+import type { CompromisoFicha, FichaEmpresa } from "../../schemas/ficha.schema";
+
+// Los colores salen de tonoEstado: activo verde, inactivo rojo, el resto naranja.
+const ESTADO_EMPRESA: Record<EstadoCliente, string> = {
+  activo: "Activo",
+  rut_por_renovar: "RUT por renovar",
+  inactivo: "Inactivo",
+};
+
+const ESTADO_RUT: Record<FichaEmpresa["company"]["rut_status"], string> = {
+  activo: "Activo",
+  suspendido: "Suspendido",
+  cancelado: "Cancelado",
+};
+
+const ESTADO_COMPROMISO: Record<string, string> = {
+  por_iniciar: "Por iniciar",
+  en_curso: "En curso",
+  cerrado: "Cerrado",
+};
+
+/** Etiqueta de un estado de compromiso; si llega uno nuevo, se muestra legible igual. */
+const estadoCompromiso = (s: string) =>
+  ESTADO_COMPROMISO[s] ?? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
+
+const PROXIMAMENTE = "Disponible próximamente";
+
+// ---------------------------------------------------------------------------
+
+function Tarjeta({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-tarjeta border border-wi-borde bg-wi-superficie p-5">
+      <h2 className="mb-4 text-tarjeta font-semibold text-wi-tinta">
+        {titulo}
+        {nota && <span className="ml-2 text-apoyo font-normal text-wi-secundario">{nota}</span>}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/** Lista de datos etiqueta–valor sobre fondo gris claro. */
+function ListaDatos({ filas }: { filas: [string, ReactNode][] }) {
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-3 rounded-tarjeta border border-wi-borde bg-wi-lienzo p-4">
+      {filas.map(([etiqueta, valor]) => (
+        <div key={etiqueta} className="contents">
+          <dt className="text-wi-secundario">{etiqueta}</dt>
+          <dd className="break-words text-wi-tinta">{valor}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Esqueleto() {
+  return (
+    <div aria-hidden className="grid gap-5 amplio:grid-cols-[380px_1fr]">
+      {[0, 1].map((col) => (
+        <div key={col} className="flex flex-col gap-5">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-[220px] rounded-tarjeta border border-wi-borde bg-wi-neutro-fondo" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function DatosRut({ ficha }: { ficha: FichaEmpresa }) {
+  const c = ficha.company;
+  const versiones = ficha.rut_versions.length;
+  // PENDIENTE: la API solo envía códigos DANE y CIIU; mostrar los nombres cuando los incluya.
+  const ciudad = [c.city_code, c.department_code].filter(Boolean).join(" · ") || VACIO;
+  const actualizado =
+    ficha.rut_date_unknown || !c.rut_updated_at
+      ? "Sin identificar"
+      : `${formatFecha(c.rut_updated_at)}${versiones ? ` · versión ${versiones}` : ""}`;
+
+  return (
+    <ListaDatos
+      filas={[
+        ["NIT", <span key="nit" className="tabular-nums">{formatNit(c.nit, c.dv)}</span>],
+        ["Razón social", c.legal_name ?? c.display_name],
+        ["Ciudad", ciudad],
+        ["Actividad principal", c.main_activity_code ?? VACIO],
+        [
+          "Responsabilidades",
+          c.tax_responsibilities.length ? c.tax_responsibilities.map(nombreResponsabilidad).join(", ") : VACIO,
+        ],
+        [
+          "Estado del RUT",
+          <Estado key="estado" tono={tonoEstado(c.rut_status)}>
+            {ESTADO_RUT[c.rut_status]}
+          </Estado>,
+        ],
+        ["Actualizado", actualizado],
+      ]}
+    />
+  );
+}
+
+function DatosOrganizacion({ ficha }: { ficha: FichaEmpresa }) {
+  const c = ficha.company;
+  return (
+    <ListaDatos
+      filas={[
+        ["Nombre comercial", c.trade_name ?? VACIO],
+        ["Contacto principal", c.contact_name ?? VACIO],
+        ["Correo", c.contact_email ?? VACIO],
+        ["Teléfono", c.contact_phone ? <span className="tabular-nums">{c.contact_phone}</span> : VACIO],
+      ]}
+    />
+  );
+}
+
+function Compromisos({ compromisos }: { compromisos: CompromisoFicha[] }) {
+  if (!compromisos.length) return <p className="text-wi-secundario">Esta empresa aún no tiene compromisos.</p>;
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <table className="wi-tabla">
+          <thead>
+            <tr>
+              <th scope="col">Compromiso</th>
+              <th scope="col" className="num">
+                Año gravable
+              </th>
+              <th scope="col">Equipo</th>
+              <th scope="col">Estado</th>
+              <th scope="col">
+                <span className="sr-only">Acciones</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {compromisos.map((c) => (
+              <tr key={c.id}>
+                <td>
+                  {c.obligation.name} · {c.service_type.name}
+                </td>
+                <td className="num">{c.fiscal_year}</td>
+                <td>{[c.partner?.full_name, c.manager?.full_name].filter(Boolean).join(" · ") || VACIO}</td>
+                <td>
+                  <Estado tono={tonoEstado(c.status)}>{estadoCompromiso(c.status)}</Estado>
+                </td>
+                <td className="text-right">
+                  <Button variant="texto" disabled title={PROXIMAMENTE}>
+                    Abrir
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-apoyo text-wi-secundario">El detalle de cada compromiso estará disponible próximamente.</p>
+    </>
+  );
+}
+
+function OtrasEmpresas({ ficha }: { ficha: FichaEmpresa }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="wi-tabla">
+        <thead>
+          <tr>
+            <th scope="col">Empresa</th>
+            <th scope="col">NIT</th>
+            <th scope="col">Estado</th>
+            <th scope="col">
+              <span className="sr-only">Acciones</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {ficha.group_companies.map((e) => (
+            <tr key={e.id}>
+              <td>{e.display_name}</td>
+              <td className="tabular-nums">{formatNit(e.nit, e.dv)}</td>
+              <td>
+                <Estado tono={tonoEstado(e.status)}>{ESTADO_EMPRESA[e.status]}</Estado>
+              </td>
+              <td className="text-right">
+                <Link
+                  href={`/clientes/${encodeURIComponent(e.id)}`}
+                  aria-label={`Ver ${e.display_name}`}
+                  className={buttonClasses("texto")}
+                >
+                  Ver
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/** Ficha de la empresa (se abre con «Ver» desde el listado de clientes). */
+export function FichaEmpresaVista({ id }: { id: string }) {
+  const { data: ficha, error, isPending, refetch } = useFichaEmpresa(id);
+
+  if (error) {
+    // 404: no existe o quien consulta no puede verla (la API no distingue, a propósito).
+    if (error instanceof ApiError && error.status === 404) {
+      return (
+        <Mensaje
+          nivel="bloqueo"
+          titulo="No se encontró la empresa"
+          accion={
+            <Link href="/clientes" className={buttonClasses("secundaria")}>
+              Volver a clientes
+            </Link>
+          }
+        >
+          <p>Puede que no exista o que no tengas acceso a ella.</p>
+        </Mensaje>
+      );
+    }
+    return <MensajeError error={error} onRetry={() => refetch()} />;
+  }
+
+  if (isPending) {
+    return (
+      <div role="status" aria-busy="true">
+        <span className="sr-only">Cargando la ficha de la empresa…</span>
+        <Esqueleto />
+      </div>
+    );
+  }
+
+  const { company } = ficha;
+  const estado = { etiqueta: ESTADO_EMPRESA[ficha.status], tono: tonoEstado(ficha.status) };
+
+  return (
+    <>
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-5">
+        <h1 className="text-pantalla font-semibold tracking-[-0.01em] text-wi-tinta">{company.display_name}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <Estado tono={estado.tono}>{estado.etiqueta}</Estado>
+          {company.group && <span className="text-apoyo text-wi-secundario">{company.group.name}</span>}
+          <Button disabled title={PROXIMAMENTE}>
+            Actualizar RUT
+          </Button>
+          <Button disabled title={PROXIMAMENTE}>
+            Editar datos
+          </Button>
+          <Button variant="principal" disabled title={PROXIMAMENTE}>
+            <IconoMas />
+            Agregar empresa al grupo
+          </Button>
+        </div>
+        <p className="w-full text-right text-apoyo text-wi-secundario">
+          Actualizar el RUT, editar los datos y agregar empresas al grupo estarán disponibles próximamente.
+        </p>
+      </header>
+
+      <div className="grid items-start gap-5 amplio:grid-cols-[380px_1fr]">
+        <div className="flex flex-col gap-5">
+          <Tarjeta titulo="Datos del RUT" nota="no editables">
+            <DatosRut ficha={ficha} />
+          </Tarjeta>
+          <Tarjeta titulo="Datos de la organización">
+            <DatosOrganizacion ficha={ficha} />
+          </Tarjeta>
+        </div>
+
+        <div className="flex flex-col gap-5">
+          <Tarjeta titulo="Compromisos de esta empresa">
+            <Compromisos compromisos={ficha.engagements} />
+          </Tarjeta>
+          {company.group && ficha.group_companies.length > 0 && (
+            <Tarjeta titulo={`Otras empresas del ${company.group.name}`}>
+              <OtrasEmpresas ficha={ficha} />
+            </Tarjeta>
+          )}
+          <Tarjeta titulo="Documentos">
+            <p className="flex flex-wrap items-center gap-3 text-wi-secundario">
+              RUT y demás documentos maestros de esta empresa.
+              <Button variant="texto" disabled title={PROXIMAMENTE}>
+                Abrir carpeta
+              </Button>
+              <span className="text-apoyo">(próximamente)</span>
+            </p>
+          </Tarjeta>
+        </div>
+      </div>
+    </>
+  );
+}

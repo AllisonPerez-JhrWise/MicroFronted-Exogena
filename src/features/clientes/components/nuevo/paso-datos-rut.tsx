@@ -4,7 +4,7 @@ import { Fragment, useId, useState, type FormEvent, type InputHTMLAttributes, ty
 import { formatFecha, formatNit, VACIO } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/button";
 import { Campo } from "@/shared/ui/campo";
-import { Estado } from "@/shared/ui/estado";
+import { Estado, tonoEstado, type EstadoTono } from "@/shared/ui/estado";
 import { IconoAtras } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
 import {
@@ -22,11 +22,11 @@ const TIPO_PERSONA: Record<RutValidado["person_type"], string> = {
   natural: "Persona natural",
 };
 
-// «Activo» en verde según el mockup aprobado; suspendido pide atención; cancelado es riesgo.
-const ESTADO_RUT: Record<RutValidado["rut_status"], { etiqueta: string; tono: "ok" | "accion" | "riesgo" }> = {
-  activo: { etiqueta: "Activo", tono: "ok" },
-  suspendido: { etiqueta: "Suspendido", tono: "accion" },
-  cancelado: { etiqueta: "Cancelado", tono: "riesgo" },
+// Color según la regla de cápsulas del proyecto (ver tonoEstado).
+const ESTADO_RUT: Record<RutValidado["rut_status"], { etiqueta: string; tono: EstadoTono }> = {
+  activo: { etiqueta: "Activo", tono: tonoEstado("activo") },
+  suspendido: { etiqueta: "Suspendido", tono: tonoEstado("suspendido") },
+  cancelado: { etiqueta: "Cancelado", tono: tonoEstado("cancelado") },
 };
 
 const unir = (partes: (string | null | undefined)[], separador: string) =>
