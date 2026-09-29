@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { IconoCerrar } from "@/shared/ui/iconos";
 import { IndicadorPasos } from "@/shared/ui/indicador-pasos";
-import type { ClienteExistente } from "../../schemas/cliente-existente.schema";
 import type { Compromiso } from "../../schemas/compromiso.schema";
+import type { SeleccionGrupo } from "../../schemas/grupo.schema";
 import { ORGANIZACION_VACIA, type Organizacion } from "../../schemas/organizacion.schema";
 import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
 import type { ClienteCreado } from "../../schemas/usuario.schema";
@@ -24,8 +24,8 @@ interface DatosNuevoCliente {
   archivo: File | null;
   rut: RutValidado | null;
   organizacion: Organizacion;
-  /** Cliente existente (grupo) al que se asocia la empresa; null = cliente nuevo. */
-  clienteExistente: ClienteExistente | null;
+  /** Grupo del catálogo o nuevo; null = sin grupo. */
+  grupo: SeleccionGrupo | null;
   compromisos: Compromiso[];
   usuarios: DatosPasoUsuarios;
 }
@@ -48,7 +48,7 @@ export function NuevoClienteFlujo({ tituloId, onCerrar, onCreado }: NuevoCliente
     archivo: null,
     rut: null,
     organizacion: ORGANIZACION_VACIA,
-    clienteExistente: null,
+    grupo: null,
     compromisos: [],
     usuarios: { incluirContacto: true, cargoContacto: "", usuarios: [] },
   });
@@ -94,7 +94,7 @@ export function NuevoClienteFlujo({ tituloId, onCerrar, onCreado }: NuevoCliente
         <PasoDatosRut
           rut={datos.rut}
           organizacionInicial={datos.organizacion}
-          clienteExistenteInicial={datos.clienteExistente}
+          grupoInicial={datos.grupo}
           onAtras={(cambios) => irA(0, cambios)}
           onSiguiente={(cambios) => irA(2, cambios)}
         />
@@ -113,10 +113,11 @@ export function NuevoClienteFlujo({ tituloId, onCerrar, onCreado }: NuevoCliente
         <PasoUsuarios
           rut={datos.rut}
           organizacion={datos.organizacion}
-          clienteExistente={datos.clienteExistente}
+          grupo={datos.grupo}
           compromisos={datos.compromisos}
           datosIniciales={datos.usuarios}
           onIrAPaso={(paso, usuarios) => irA(paso, { usuarios })}
+          onCambiarGrupo={(grupo) => setDatos((d) => ({ ...d, grupo }))}
           onCreado={onCreado}
         />
       )}

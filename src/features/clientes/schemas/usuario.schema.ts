@@ -25,10 +25,13 @@ export type CampoUsuario = keyof Usuario;
 
 export const USUARIO_VACIO: Usuario = { nombres: "", apellidos: "", correo: "", celular: "", cargo: "" };
 
-/** Respuesta de POST /clients ({ client, company, engagements, users }): solo lo necesario para confirmar. */
+/** Respuesta de POST /clients ({ company, engagements, users }): solo lo necesario para confirmar. */
 export const clienteCreadoSchema = z.object({
-  client: z.object({ id: z.string(), name: z.string() }),
-  company: z.object({ id: z.string(), display_name: z.string() }),
+  company: z.object({
+    id: z.string(),
+    display_name: z.string(),
+    group: z.object({ id: z.string(), name: z.string() }).nullable(),
+  }),
 });
 
 export type ClienteCreado = z.infer<typeof clienteCreadoSchema>;

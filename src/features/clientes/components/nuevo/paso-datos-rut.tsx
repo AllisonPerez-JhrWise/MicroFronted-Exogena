@@ -13,7 +13,7 @@ import {
   type CampoOrganizacion,
   type Organizacion,
 } from "../../schemas/organizacion.schema";
-import type { ClienteExistente } from "../../schemas/cliente-existente.schema";
+import type { SeleccionGrupo } from "../../schemas/grupo.schema";
 import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
 import { SelectorGrupo } from "./selector-grupo";
 
@@ -124,41 +124,23 @@ function errorDe(campo: CampoOrganizacion, valor: string) {
 
 export interface ResultadoPasoDatosRut {
   organizacion: Organizacion;
-  clienteExistente: ClienteExistente | null;
+  grupo: SeleccionGrupo | null;
 }
 
 interface PasoDatosRutProps {
   rut: RutValidado;
   organizacionInicial: Organizacion;
-  clienteExistenteInicial: ClienteExistente | null;
+  grupoInicial: SeleccionGrupo | null;
   /** Devuelve lo diligenciado para no perderlo al volver. */
   onAtras: (resultado: ResultadoPasoDatosRut) => void;
   onSiguiente: (resultado: ResultadoPasoDatosRut) => void;
 }
 
-export function PasoDatosRut({
-  rut,
-  organizacionInicial,
-  clienteExistenteInicial,
-  onAtras,
-  onSiguiente,
-}: PasoDatosRutProps) {
+export function PasoDatosRut({ rut, organizacionInicial, grupoInicial, onAtras, onSiguiente }: PasoDatosRutProps) {
   const id = useId();
   const [valores, setValores] = useState<Organizacion>(organizacionInicial);
   const [errores, setErrores] = useState<Errores>({});
-  const [clienteExistente, setClienteExistente] = useState(clienteExistenteInicial);
-
-  // Al elegir un grupo se propone su contacto, sin pisar lo que ya se escribió.
-  const elegirGrupo = (cliente: ClienteExistente | null) => {
-    setClienteExistente(cliente);
-    if (!cliente) return;
-    setValores((v) => ({
-      ...v,
-      contactoPrincipal: v.contactoPrincipal || cliente.contact_name || "",
-      correoContacto: v.correoContacto || cliente.contact_email || "",
-      telefono: v.telefono || cliente.contact_phone || "",
-    }));
-  };
+  const [grupo, setGrupo] = useState(grupoInicial);
 
   const cambiar = (campo: CampoOrganizacion, valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
@@ -169,7 +151,7 @@ export function PasoDatosRut({
   const enviar = (e: FormEvent) => {
     e.preventDefault();
     const resultado = organizacionSchema.safeParse(valores);
-    if (resultado.success) return onSiguiente({ organizacion: resultado.data, clienteExistente });
+    if (resultado.success) return onSiguiente({ organizacion: resultado.data, grupo });
 
     const nuevos: Errores = {};
     for (const issue of resultado.error.issues) {
@@ -206,7 +188,7 @@ export function PasoDatosRut({
             {CAMPOS.map(({ campo, etiqueta, props }, i) => (
               <Fragment key={campo}>
                 {/* El grupo (opcional) va justo antes de las notas. */}
-                {campo === "notas" && <SelectorGrupo valor={clienteExistente} onCambio={elegirGrupo} />}
+                {campo === "notas" && <SelectorGrupo valor={grupo} onCambio={setGrupo} />}
                 <CampoFormulario
                   id={`${id}-${campo}`}
                   etiqueta={etiqueta}
@@ -227,7 +209,7 @@ export function PasoDatosRut({
       </div>
 
       <div className="flex justify-end gap-3">
-        <Button onClick={() => onAtras({ organizacion: valores, clienteExistente })}>
+        <Button onClick={() => onAtras({ organizacion: valores, grupo })}>
           <IconoAtras />
           Atrás
         </Button>

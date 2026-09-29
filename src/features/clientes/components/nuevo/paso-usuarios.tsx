@@ -9,8 +9,8 @@ import { Campo } from "@/shared/ui/campo";
 import { IconoAtras, IconoMas } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
 import { useCrearCliente } from "../../hooks/use-crear-cliente";
-import type { ClienteExistente } from "../../schemas/cliente-existente.schema";
 import type { Compromiso } from "../../schemas/compromiso.schema";
+import type { SeleccionGrupo } from "../../schemas/grupo.schema";
 import { dividirNombre, type Organizacion } from "../../schemas/organizacion.schema";
 import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
 import {
@@ -27,6 +27,8 @@ const nombreCompleto = (u: Usuario) => `${u.nombres} ${u.apellidos}`.trim();
 
 // Nombres legibles de los campos que el servicio puede rechazar (422).
 const CAMPOS_API: Record<string, string> = {
+  group_id: "grupo",
+  group_name: "grupo",
   nit: "NIT",
   dv: "dígito de verificación",
   person_type: "tipo de persona",
@@ -61,11 +63,14 @@ const CAMPOS_API: Record<string, string> = {
 
 /** `details` de un error de back_exogena, con las formas que documenta la API. */
 interface DetallesError {
-  cause?: "rut_not_active" | "rut_too_old" | "rut_generated_in_future" | "nit_exists";
+  cause?: "rut_not_active" | "rut_too_old" | "rut_generated_in_future" | "nit_exists" | "group_exists";
   status?: string;
   days?: number;
   max_days?: number;
   company_id?: string;
+  /** group_exists: el grupo existente con ese nombre. */
+  group_id?: string;
+  name?: string;
   email?: string;
   engagement?: number;
   field?: string;
@@ -173,21 +178,24 @@ export interface DatosPasoUsuarios {
 interface PasoUsuariosProps {
   rut: RutValidado;
   organizacion: Organizacion;
-  clienteExistente: ClienteExistente | null;
+  grupo: SeleccionGrupo | null;
   compromisos: Compromiso[];
   datosIniciales: DatosPasoUsuarios;
   /** Vuelve a otro paso guardando lo de este (0 = NIT y RUT, 2 = Compromisos). */
   onIrAPaso: (paso: number, datos: DatosPasoUsuarios) => void;
+  /** Reemplaza el grupo elegido (p. ej. por el existente que sugiere group_exists). */
+  onCambiarGrupo: (grupo: SeleccionGrupo) => void;
   onCreado: (cliente: ClienteCreado) => void;
 }
 
 export function PasoUsuarios({
   rut,
   organizacion,
-  clienteExistente,
+  grupo,
   compromisos,
   datosIniciales,
   onIrAPaso,
+  onCambiarGrupo,
   onCreado,
 }: PasoUsuariosProps) {
   const idCargo = useId();
@@ -214,15 +222,22 @@ export function PasoUsuarios({
     };
   };
 
+  // Si se omitió en el último intento, para repetirlo igual (p. ej. tras elegir el grupo sugerido).
+  const [ultimoOmitir, setUltimoOmitir] = useState(false);
+
   /** Crea el cliente. «Omitir» envía la lista de usuarios vacía. */
-  const enviar = (omitir: boolean) => {
+  const enviar = (omitir: boolean, grupoUsar: SeleccionGrupo | null = grupo) => {
     if (!omitir && incluirContacto && !cargoContacto.trim()) {
       setErrorCargo(MENSAJE_CARGO_PRINCIPAL);
       document.getElementById(idCargo)?.focus();
       return;
     }
+    setUltimoOmitir(omitir);
     const lista = omitir ? [] : [...(incluirContacto ? [usuarioContacto()] : []), ...usuarios];
-    crear.mutate({ rut, organizacion, clienteExistente, compromisos, usuarios: lista }, { onSuccess: onCreado });
+    crear.mutate(
+      { rut, organizacion, grupo: grupoUsar, compromisos, usuarios: lista },
+      { onSuccess: onCreado },
+    );
   };
 
   const error = crear.error;
@@ -243,6 +258,34 @@ export function PasoUsuarios({
 
     // PENDIENTE: textos provisionales de los errores del RUT; reemplazar por los mensajes de la tarea.
     switch (detalles?.cause) {
+      case "group_exists": {
+        // El grupo nuevo ya existe (escrito distinto): se ofrece usar el del catálogo y reintentar.
+        const existente = detalles.group_id && detalles.name ? { id: detalles.group_id, nombre: detalles.name } : null;
+        return (
+          <Mensaje
+            nivel="atencion"
+            titulo={existente ? `¿Quisiste decir ${existente.nombre}?` : "Ese grupo ya existe"}
+            accion={
+              existente && (
+                <Button
+                  onClick={() => {
+                    const elegido: SeleccionGrupo = { tipo: "existente", ...existente };
+                    onCambiarGrupo(elegido);
+                    enviar(ultimoOmitir, elegido);
+                  }}
+                >
+                  Usar {existente.nombre}
+                </Button>
+              )
+            }
+          >
+            <p>
+              Ya hay un grupo con ese nombre en el catálogo.{" "}
+              {existente ? "Úsalo para no duplicarlo." : "Elígelo de la lista en «Datos del RUT»."}
+            </p>
+          </Mensaje>
+        );
+      }
       case "nit_exists":
         return (
           <Mensaje nivel="bloqueo" titulo={`Ya existe una empresa con el NIT ${formatNit(rut.nit, rut.dv)}`}>
@@ -442,7 +485,12 @@ export function PasoUsuarios({
       {mensajeError() ?? (
         <p className="rounded-tarjeta border border-wi-borde bg-wi-lienzo p-4 text-wi-texto">
           Se creará: <span className="font-semibold text-wi-tinta">{nombreDelRut(rut)}</span>
-          {clienteExistente && <span className="ml-2 text-wi-secundario">en {clienteExistente.name}</span>}
+          {grupo && (
+            <span className="ml-2 text-wi-secundario">
+              en {grupo.nombre}
+              {grupo.tipo === "nuevo" && " (grupo nuevo)"}
+            </span>
+          )}
           <span className="ml-5">{plural(compromisos.length, "compromiso", "compromisos")}</span>
           <span className="ml-5">
             {plural(totalUsuarios, "usuario del cliente", "usuarios del cliente")}

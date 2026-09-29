@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/http/api-client";
-import { clienteExistenteSchema, nitCheckSchema, type ClienteExistente } from "../schemas/cliente-existente.schema";
 import { clientesPageSchema, type ClientesFiltros } from "../schemas/cliente.schema";
+import { grupoSchema, nitCheckSchema, type SeleccionGrupo } from "../schemas/grupo.schema";
 import type { Compromiso } from "../schemas/compromiso.schema";
 import type { Organizacion } from "../schemas/organizacion.schema";
 import type { RutValidado } from "../schemas/rut.schema";
@@ -15,8 +15,8 @@ export interface ListarClientesParams extends ClientesFiltros {
 export interface CrearClienteParams {
   rut: RutValidado;
   organizacion: Organizacion;
-  /** Cliente existente (grupo) al que se asocia la empresa; null = cliente nuevo. */
-  clienteExistente: ClienteExistente | null;
+  /** Grupo del catálogo o nuevo; null = la empresa no pertenece a un grupo. */
+  grupo: SeleccionGrupo | null;
   compromisos: Compromiso[];
   usuarios: Usuario[];
 }
@@ -24,9 +24,11 @@ export interface CrearClienteParams {
 const oNull = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null);
 
 /** Cuerpo de POST /clients (back_exogena): todo el asistente en una sola petición. */
-export function cuerpoCrearCliente({ rut, organizacion, clienteExistente, compromisos, usuarios }: CrearClienteParams) {
+export function cuerpoCrearCliente({ rut, organizacion, grupo, compromisos, usuarios }: CrearClienteParams) {
   return {
-    client_id: clienteExistente?.id ?? null,
+    // Grupo existente (group_id) o nuevo (group_name); nunca ambos. Sin grupo, ninguno.
+    ...(grupo?.tipo === "existente" && { group_id: grupo.id }),
+    ...(grupo?.tipo === "nuevo" && { group_name: grupo.nombre.trim() }),
     rut: {
       nit: rut.nit,
       dv: rut.dv,
@@ -95,11 +97,11 @@ export const clientesService = {
   nitCheck: (nit: string, signal?: AbortSignal) =>
     apiRequest("/companies/nit-check", { schema: nitCheckSchema, query: { nit }, signal }),
 
-  /** Clientes activos por su nombre o el nombre/NIT de sus empresas (máximo 20). */
-  buscar: (q: string, signal?: AbortSignal) =>
-    apiRequest("/clients/search", { schema: z.array(clienteExistenteSchema), query: { q }, signal }),
+  /** Catálogo de grupos (máximo 20). Sin `q`, todos; no distingue mayúsculas ni tildes. */
+  grupos: (q: string, signal?: AbortSignal) =>
+    apiRequest("/groups", { schema: z.array(grupoSchema), query: { q: q || undefined }, signal }),
 
-  /** Crea cliente (o usa el existente), empresa, compromisos y usuarios. Si algo falla, no se guarda nada. */
+  /** Crea la empresa (cliente) con su RUT, grupo, compromisos y usuarios. Si algo falla, no se guarda nada. */
   crear: (params: CrearClienteParams) =>
     apiRequest("/clients", { method: "POST", schema: clienteCreadoSchema, body: cuerpoCrearCliente(params) }),
 };

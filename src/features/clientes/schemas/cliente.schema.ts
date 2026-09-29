@@ -8,13 +8,14 @@ export type EstadoCliente = z.infer<typeof estadoClienteSchema>;
 
 export const clienteSchema = z.object({
   id: z.string(),
-  client_id: z.string(),
+  /** Grupo al que pertenece; null si no está en un grupo. */
+  group_id: z.string().nullable(),
   /** Nombre de la empresa (columna «Empresa»). */
   display_name: z.string(),
   trade_name: z.string().nullable(),
   nit: z.string(),
   dv: z.string().nullable(),
-  /** Nombre del grupo; null si el cliente tiene una sola empresa. */
+  /** Nombre del grupo; null si no pertenece a un grupo. */
   group: z.string().nullable(),
   /** Compromisos por iniciar o en curso. */
   active_engagements: z.number().int().nonnegative(),
