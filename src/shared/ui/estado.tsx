@@ -1,30 +1,37 @@
-export type EstadoTono = "neutro" | "accion" | "riesgo" | "ok";
+export type EstadoTono = "neutro" | "accion" | "riesgo" | "ok" | "contorno";
 
 const tonos: Record<EstadoTono, string> = {
   neutro: "bg-wi-neutro-fondo text-wi-neutro border-wi-neutro-linea",
   accion: "bg-wi-accion-fondo text-wi-accion border-wi-accion-linea",
   riesgo: "bg-wi-riesgo-fondo text-wi-riesgo border-wi-riesgo-linea",
   ok: "bg-wi-ok-fondo text-wi-ok border-wi-ok-linea",
+  /** Trabajo en marcha: fondo blanco, borde y texto en tinta. */
+  contorno: "bg-wi-superficie text-wi-tinta border-wi-tinta font-medium",
 };
 
-/**
- * Regla del proyecto para las cápsulas de estado (decisión de producto, por encima de la guía Wise):
- * «activo» en verde, «inactivo» en rojo y cualquier otro estado en naranja.
- * Recibe el valor que envía la API (activo, inactivo, rut_por_renovar, por_iniciar…).
- */
+/**Regla del proyecto para las cápsulas de estado */
 export function tonoEstado(valor: string): EstadoTono {
-  const v = valor.toLowerCase();
-  if (v === "activo") return "ok";
-  if (v === "inactivo") return "riesgo";
-  return "accion";
+  switch (valor.toLowerCase()) {
+    case "activo":
+      return "ok";
+    case "inactivo":
+      return "riesgo";
+    case "por_iniciar":
+    case "en_curso":
+      return "contorno";
+    case "cerrado":
+      return "neutro";
+    default:
+      return "accion";
+  }
 }
 
-/** Píldora de estado. Siempre lleva texto: el color nunca comunica solo. */
 export function Estado({ tono = "neutro", children }: { tono?: EstadoTono; children: string }) {
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap rounded-pildora border px-[9px] py-[2px] text-apoyo ${tonos[tono]}`}
+      className={`inline-flex items-center gap-2 whitespace-nowrap rounded-pildora border px-[9px] py-[2px] text-apoyo ${tonos[tono]}`}
     >
+      <span aria-hidden className="size-[6px] shrink-0 rounded-pildora bg-current" />
       {children}
     </span>
   );

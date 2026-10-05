@@ -18,14 +18,14 @@ export interface RequestOptions<TSchema extends z.ZodType> {
 }
 
 /**
- * Cabeceras comunes a todas las peticiones. Cuando el host entregue la sesión:
+ * Cabeceras comunes a todas las peticiones. Las APIs exigen en cada una:
  *
- *   setHeadersProvider(() => ({
- *     Authorization: `Bearer ${token}`, // token de Cognito que entrega el host
- *     "X-Tenant-Id": tenantId,          // organización en la que trabaja el usuario
- *   }));
+ *   Authorization: Bearer <access token de Cognito>   (nunca el id token)
+ *   X-Organization-Id: <uuid de la organización activa>
  *
- * Mientras tanto no se envía nada: el microservicio corre en modo de pruebas (AUTH_BYPASS).
+ * Hoy se configuran en `app/providers.tsx` con NEXT_PUBLIC_DEV_TOKEN y
+ * NEXT_PUBLIC_ORGANIZATION_ID: el token de `.env.local` es SOLO para desarrollo local.
+ * Cuando el host entregue la sesión, se reemplaza por el token y la organización del host.
  */
 let headersProvider: () => HeadersInit | Promise<HeadersInit> = () => ({});
 
