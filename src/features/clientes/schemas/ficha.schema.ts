@@ -4,12 +4,15 @@ import { estadoClienteSchema } from "./cliente.schema";
 // Ficha de la empresa: back_exogena · GET /companies/{id}.
 // Solo se declaran los campos que usa la pantalla; el resto se ignora.
 
-const personaSchema = z.object({ user_id: z.string(), full_name: z.string() });
+// Exógena solo guarda el id del socio y del gerente: el nombre lo tiene Identidad (puede venir null).
+const personaSchema = z.object({ user_id: z.string(), full_name: z.string().nullable() });
 
 export const compromisoFichaSchema = z.object({
   id: z.string(),
-  obligation: z.object({ id: z.string(), name: z.string() }),
-  service_type: z.object({ id: z.string(), name: z.string() }),
+  /** Ya no viene en los compromisos de exógena; se acepta mientras queden datos anteriores. */
+  obligation: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+  /** Hoy "exogena"; los compromisos anteriores lo traían como { id, name }. */
+  service_type: z.union([z.string(), z.object({ id: z.string(), name: z.string() })]).nullable().optional(),
   fiscal_year: z.number(),
   due_date: z.string().nullable(),
   /** por_iniciar, en_curso, cerrado… (se muestra aunque llegue un valor nuevo). */
@@ -55,3 +58,12 @@ export const fichaEmpresaSchema = z.object({
 export type FichaEmpresa = z.infer<typeof fichaEmpresaSchema>;
 export type CompromisoFicha = z.infer<typeof compromisoFichaSchema>;
 export type EmpresaGrupo = z.infer<typeof empresaGrupoSchema>;
+
+const SERVICIOS: Record<string, string> = { exogena: "Exógena" };
+
+/** Nombre del compromiso: «Exógena», o «Obligación · Tipo» en los compromisos anteriores. */
+export function nombreCompromiso(c: CompromisoFicha): string {
+  const tipo = c.service_type;
+  if (typeof tipo === "string") return SERVICIOS[tipo] ?? tipo;
+  return [c.obligation?.name, tipo?.name].filter(Boolean).join(" · ") || "Exógena";
+}

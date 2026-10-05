@@ -9,11 +9,12 @@ import { Button, buttonClasses } from "@/shared/ui/button";
 import { Estado, tonoEstado } from "@/shared/ui/estado";
 import { IconoMas } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
+import { usePersonasFirma } from "../../hooks/use-catalogos";
 import { useFichaEmpresa } from "../../hooks/use-ficha-empresa";
 import { useRutEmpresa } from "../../hooks/use-rut";
 import { digitoDe, type EstadoCliente } from "../../schemas/cliente.schema";
 import { etiquetaEstadoRut, nombreDelRut, type Rut } from "../../schemas/rut.schema";
-import type { CompromisoFicha, FichaEmpresa } from "../../schemas/ficha.schema";
+import { nombreCompromiso, type CompromisoFicha, type FichaEmpresa } from "../../schemas/ficha.schema";
 
 // Los colores salen de tonoEstado: activo verde, inactivo rojo, el resto naranja.
 const ESTADO_EMPRESA: Record<EstadoCliente, string> = {
@@ -175,7 +176,14 @@ function DatosOrganizacion({ ficha }: { ficha: FichaEmpresa }) {
   );
 }
 
+type Persona = CompromisoFicha["partner"];
+
 function Compromisos({ compromisos }: { compromisos: CompromisoFicha[] }) {
+  // Los nombres salen de los miembros de la firma (Identidad), la misma consulta del paso
+  // «Compromisos». Si Identidad no responde, se usa full_name si vino; si no, «—».
+  const personas = usePersonasFirma();
+  const nombre = (p: Persona) => (p ? (personas.data?.find((x) => x.id === p.user_id)?.nombre ?? p.full_name) : null);
+
   if (!compromisos.length) return <p className="text-wi-secundario">Esta empresa aún no tiene compromisos.</p>;
 
   return (
@@ -198,11 +206,9 @@ function Compromisos({ compromisos }: { compromisos: CompromisoFicha[] }) {
           <tbody>
             {compromisos.map((c) => (
               <tr key={c.id}>
-                <td>
-                  {c.obligation.name} · {c.service_type.name}
-                </td>
+                <td>{nombreCompromiso(c)}</td>
                 <td className="num">{c.fiscal_year}</td>
-                <td>{[c.partner?.full_name, c.manager?.full_name].filter(Boolean).join(" · ") || VACIO}</td>
+                <td>{[nombre(c.partner), nombre(c.manager)].filter(Boolean).join(" · ") || VACIO}</td>
                 <td>
                   <Estado tono={tonoEstado(c.status)}>{estadoCompromiso(c.status)}</Estado>
                 </td>
