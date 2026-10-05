@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Pantalla de clientes: una fila por empresa (NIT). back_exogena · GET /companies.
 
-export const ESTADOS_CLIENTE = ["activo", "inactivo", "rut_por_renovar"] as const;
+export const ESTADOS_CLIENTE = ["active", "inactive", "rut_renewal_due"] as const;
 export const estadoClienteSchema = z.enum(ESTADOS_CLIENTE);
 export type EstadoCliente = z.infer<typeof estadoClienteSchema>;
 
@@ -14,7 +14,9 @@ export const clienteSchema = z.object({
   display_name: z.string(),
   trade_name: z.string().nullable(),
   nit: z.string(),
-  dv: z.string().nullable(),
+  /** Dígito de verificación: `check_digit` (nuevo) o `dv` (anterior); usar digitoDe(). */
+  check_digit: z.string().nullable().optional(),
+  dv: z.string().nullable().optional(),
   /** Nombre del grupo; null si no pertenece a un grupo. */
   group: z.string().nullable(),
   /** Compromisos por iniciar o en curso. */
@@ -47,3 +49,6 @@ export interface ClientesFiltros {
   compromisosMax?: number;
   estados?: EstadoCliente[];
 }
+
+/** Dígito de verificación de una empresa, venga como `check_digit` o como `dv`. */
+export const digitoDe = (e: { check_digit?: string | null; dv?: string | null }) => e.check_digit ?? e.dv ?? null;

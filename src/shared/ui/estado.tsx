@@ -13,8 +13,10 @@ const tonos: Record<EstadoTono, string> = {
 export function tonoEstado(valor: string): EstadoTono {
   switch (valor.toLowerCase()) {
     case "activo":
+    case "active":
       return "ok";
     case "inactivo":
+    case "inactive":
       return "riesgo";
     case "por_iniciar":
     case "en_curso":

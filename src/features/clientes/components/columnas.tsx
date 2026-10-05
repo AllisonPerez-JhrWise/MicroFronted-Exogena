@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { formatFecha, formatNit, VACIO } from "@/shared/lib/format";
 import { Estado, tonoEstado, type EstadoTono } from "@/shared/ui/estado";
-import type { Cliente, EstadoCliente } from "../schemas/cliente.schema";
+import { digitoDe, type Cliente, type EstadoCliente } from "../schemas/cliente.schema";
 
 // Color según la regla de cápsulas del proyecto (ver tonoEstado).
 export const ESTADO_CLIENTE: Record<EstadoCliente, { etiqueta: string; tono: EstadoTono }> = {
-  activo: { etiqueta: "Activo", tono: tonoEstado("activo") },
-  inactivo: { etiqueta: "Inactivo", tono: tonoEstado("inactivo") },
-  rut_por_renovar: { etiqueta: "RUT por renovar", tono: tonoEstado("rut_por_renovar") },
+  active: { etiqueta: "Activo", tono: tonoEstado("active") },
+  inactive: { etiqueta: "Inactivo", tono: tonoEstado("inactive") },
+  rut_renewal_due: { etiqueta: "RUT por renovar", tono: tonoEstado("rut_renewal_due") },
 };
 
 /** Meses completos entre una fecha (YYYY-MM-DD) y hoy. */
@@ -25,7 +25,7 @@ function mesesDesde(fecha: string) {
  */
 function notaRut(c: Cliente): string | null {
   if (c.rut_date_unknown) return "RUT cargado antes";
-  if (c.status === "rut_por_renovar" && c.rut_generated_at) {
+  if (c.status === "rut_renewal_due" && c.rut_generated_at) {
     const meses = mesesDesde(c.rut_generated_at);
     return `Generado hace ${meses} ${meses === 1 ? "mes" : "meses"}`;
   }
@@ -47,7 +47,7 @@ interface DefinicionColumna {
 export const DEFINICION_COLUMNAS: Record<ColumnaCliente, DefinicionColumna> = {
   empresa: { titulo: "Empresa", obligatoria: true, celda: (c) => c.display_name },
   // El NIT es un identificador, no una cantidad: va a la izquierda como el mockup.
-  nit: { titulo: "NIT", celda: (c) => <span className="tabular-nums">{formatNit(c.nit, c.dv)}</span> },
+  nit: { titulo: "NIT", celda: (c) => <span className="tabular-nums">{formatNit(c.nit, digitoDe(c))}</span> },
   grupo: { titulo: "Grupo", celda: (c) => c.group ?? VACIO },
   compromisos: { titulo: "Compromisos activos", numerica: true, celda: (c) => c.active_engagements },
   rut: {

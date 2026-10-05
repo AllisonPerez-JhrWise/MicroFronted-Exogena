@@ -22,7 +22,8 @@ export const empresaGrupoSchema = z.object({
   id: z.string(),
   display_name: z.string(),
   nit: z.string(),
-  dv: z.string().nullable(),
+  check_digit: z.string().nullable().optional(),
+  dv: z.string().nullable().optional(),
   status: estadoClienteSchema,
 });
 
@@ -36,21 +37,19 @@ export const fichaEmpresaSchema = z.object({
     contact_email: z.string().nullable(),
     contact_phone: z.string().nullable(),
     nit: z.string(),
-    dv: z.string().nullable(),
-    legal_name: z.string().nullable(),
-    department_code: z.string().nullable(),
-    city_code: z.string().nullable(),
-    main_activity_code: z.string().nullable(),
-    tax_responsibilities: z.array(z.string()),
-    rut_status: z.enum(["activo", "suspendido", "cancelado"]),
+    check_digit: z.string().nullable().optional(),
+    dv: z.string().nullable().optional(),
+    legal_name: z.string().nullable().optional(),
+    /** Texto del RUT, p. ej. «Persona jurídica». */
+    taxpayer_type: z.string().nullable().optional(),
+    /** Lectura del RUT en extracción; el detalle (dirección, CIIU, casilla 53…) vive allá. */
+    rut_id: z.string().nullable().optional(),
     rut_updated_at: z.string().nullable(),
   }),
   status: estadoClienteSchema,
   rut_date_unknown: z.boolean(),
   group_companies: z.array(empresaGrupoSchema),
   engagements: z.array(compromisoFichaSchema),
-  /** Solo se usa la cantidad, para mostrar «versión N». */
-  rut_versions: z.array(z.object({ id: z.string() })),
 });
 
 export type FichaEmpresa = z.infer<typeof fichaEmpresaSchema>;

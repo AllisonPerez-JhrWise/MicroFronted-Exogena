@@ -10,21 +10,14 @@ import { Estado, tonoEstado } from "@/shared/ui/estado";
 import { IconoMas } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
 import { useFichaEmpresa } from "../../hooks/use-ficha-empresa";
-import { nombreResponsabilidad } from "../../lib/responsabilidades";
-import type { EstadoCliente } from "../../schemas/cliente.schema";
+import { digitoDe, type EstadoCliente } from "../../schemas/cliente.schema";
 import type { CompromisoFicha, FichaEmpresa } from "../../schemas/ficha.schema";
 
 // Los colores salen de tonoEstado: activo verde, inactivo rojo, el resto naranja.
 const ESTADO_EMPRESA: Record<EstadoCliente, string> = {
-  activo: "Activo",
-  rut_por_renovar: "RUT por renovar",
-  inactivo: "Inactivo",
-};
-
-const ESTADO_RUT: Record<FichaEmpresa["company"]["rut_status"], string> = {
-  activo: "Activo",
-  suspendido: "Suspendido",
-  cancelado: "Cancelado",
+  active: "Activo",
+  rut_renewal_due: "RUT por renovar",
+  inactive: "Inactivo",
 };
 
 const ESTADO_COMPROMISO: Record<string, string> = {
@@ -85,31 +78,16 @@ function Esqueleto() {
 
 function DatosRut({ ficha }: { ficha: FichaEmpresa }) {
   const c = ficha.company;
-  const versiones = ficha.rut_versions.length;
-  // PENDIENTE: la API solo envía códigos DANE y CIIU; mostrar los nombres cuando los incluya.
-  const ciudad = [c.city_code, c.department_code].filter(Boolean).join(" · ") || VACIO;
-  const actualizado =
-    ficha.rut_date_unknown || !c.rut_updated_at
-      ? "Sin identificar"
-      : `${formatFecha(c.rut_updated_at)}${versiones ? ` · versión ${versiones}` : ""}`;
+  // PENDIENTE (bloque 6): dirección, municipio, CIIU, casilla 53, estado y versiones del RUT
+  // vienen de extracción (GET /companies/{id}/rut); exógena ya no los envía.
+  const actualizado = ficha.rut_date_unknown || !c.rut_updated_at ? "Sin identificar" : formatFecha(c.rut_updated_at);
 
   return (
     <ListaDatos
       filas={[
-        ["NIT", <span key="nit" className="tabular-nums">{formatNit(c.nit, c.dv)}</span>],
+        ["NIT", <span key="nit" className="tabular-nums">{formatNit(c.nit, digitoDe(c))}</span>],
         ["Razón social", c.legal_name ?? c.display_name],
-        ["Ciudad", ciudad],
-        ["Actividad principal", c.main_activity_code ?? VACIO],
-        [
-          "Responsabilidades",
-          c.tax_responsibilities.length ? c.tax_responsibilities.map(nombreResponsabilidad).join(", ") : VACIO,
-        ],
-        [
-          "Estado del RUT",
-          <Estado key="estado" tono={tonoEstado(c.rut_status)}>
-            {ESTADO_RUT[c.rut_status]}
-          </Estado>,
-        ],
+        ["Tipo", c.taxpayer_type ?? VACIO],
         ["Actualizado", actualizado],
       ]}
     />
@@ -194,7 +172,7 @@ function OtrasEmpresas({ ficha }: { ficha: FichaEmpresa }) {
           {ficha.group_companies.map((e) => (
             <tr key={e.id}>
               <td>{e.display_name}</td>
-              <td className="tabular-nums">{formatNit(e.nit, e.dv)}</td>
+              <td className="tabular-nums">{formatNit(e.nit, digitoDe(e))}</td>
               <td>
                 <Estado tono={tonoEstado(e.status)}>{ESTADO_EMPRESA[e.status]}</Estado>
               </td>
