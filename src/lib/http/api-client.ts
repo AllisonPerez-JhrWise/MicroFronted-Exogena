@@ -78,6 +78,9 @@ export const apiRequest = crearClienteApi(env.apiBaseUrl);
 /** Extracción (wise-extraccion): carga y lectura del RUT. Responde sin sobre. */
 export const extractionApiRequest = crearClienteApi(env.extractionApiBaseUrl);
 
+/** Identidad (wise-auth): personas y membresías de la firma. Responde sin sobre. */
+export const identityApiRequest = crearClienteApi(env.identityApiBaseUrl);
+
 async function request<TSchema extends z.ZodType>(
   baseUrl: string,
   path: string,

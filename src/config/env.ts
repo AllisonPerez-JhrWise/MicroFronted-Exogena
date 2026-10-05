@@ -15,6 +15,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_BASE_URL: z.url(),
   /** Extracción (wise-extraccion): dueña del RUT. Local sin prefijo; detrás del gateway, bajo /extraccion. */
   NEXT_PUBLIC_EXTRACTION_API_BASE_URL: z.url(),
+  /** Identidad (wise-auth): personas de la firma. Local sin prefijo; detrás del gateway, bajo /identidad. */
+  NEXT_PUBLIC_IDENTITY_API_BASE_URL: z.url(),
   NEXT_PUBLIC_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
 });
 
@@ -24,6 +26,7 @@ const parsed = envSchema.safeParse({
   NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH,
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
   NEXT_PUBLIC_EXTRACTION_API_BASE_URL: process.env.NEXT_PUBLIC_EXTRACTION_API_BASE_URL,
+  NEXT_PUBLIC_IDENTITY_API_BASE_URL: process.env.NEXT_PUBLIC_IDENTITY_API_BASE_URL,
   NEXT_PUBLIC_API_TIMEOUT_MS: process.env.NEXT_PUBLIC_API_TIMEOUT_MS,
 });
 
@@ -37,6 +40,7 @@ export const env = {
   basePath: parsed.data.NEXT_PUBLIC_BASE_PATH,
   apiBaseUrl: parsed.data.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, ""),
   extractionApiBaseUrl: parsed.data.NEXT_PUBLIC_EXTRACTION_API_BASE_URL.replace(/\/+$/, ""),
+  identityApiBaseUrl: parsed.data.NEXT_PUBLIC_IDENTITY_API_BASE_URL.replace(/\/+$/, ""),
   apiTimeoutMs: parsed.data.NEXT_PUBLIC_API_TIMEOUT_MS,
   devToken: parsed.data.NEXT_PUBLIC_DEV_TOKEN,
   organizationId: parsed.data.NEXT_PUBLIC_ORGANIZATION_ID,

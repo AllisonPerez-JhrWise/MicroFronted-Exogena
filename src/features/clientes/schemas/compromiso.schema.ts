@@ -18,17 +18,39 @@ export const tipoServicioSchema = z.object({
   service_id: z.string(),
 });
 
-/** Persona de la firma con un rol (GET /members?role=socio|gerente). */
-export const personaEquipoSchema = z.object({
-  user_id: z.string(),
-  full_name: z.string(),
-  email: z.string(),
+/**
+ * Miembros de la firma (Identidad · GET /organizacion/miembros). Socio y gerente NO son roles
+ * de la persona sino del compromiso: para los dos selectores se ofrece la misma lista.
+ */
+const miembroSchema = z.object({
+  membership_id: z.string(),
+  user: z.object({
+    id: z.string(),
+    email: z.string(),
+    full_name: z.string().nullable(),
+    is_active: z.boolean(),
+  }),
+  status: z.enum(["active", "invited", "revoked"]),
+  /** Roles GENERALES de la membresía (administrador, cliente…). */
+  roles: z.array(z.string()),
 });
 
-export type RolEquipo = "socio" | "gerente";
+export const miembrosSchema = z.object({
+  total: z.number(),
+  miembros: z.array(miembroSchema),
+});
+
+export type Miembro = z.infer<typeof miembroSchema>;
+
+/** Persona que se puede elegir como socio o gerente. `id` es el `user.id` de Identidad. */
+export interface PersonaEquipo {
+  id: string;
+  nombre: string;
+  email: string;
+}
+
 export type Obligacion = z.infer<typeof obligacionSchema>;
 export type TipoServicio = z.infer<typeof tipoServicioSchema>;
-export type PersonaEquipo = z.infer<typeof personaEquipoSchema>;
 
 /**
  * Compromiso armado en el paso 3. Se envía en `engagements` de POST /clients.
@@ -44,8 +66,9 @@ export interface Compromiso {
   anioGravable: number;
   /** YYYY-MM-DD; null si la obligación no exige vencimiento y no se indicó. */
   vencimiento: string | null;
-  socioId: string | null;
-  socioNombre: string | null;
-  gerenteId: string | null;
-  gerenteNombre: string | null;
+  /** Socio y gerente son obligatorios: back_exogena responde 422 si faltan. */
+  socioId: string;
+  socioNombre: string;
+  gerenteId: string;
+  gerenteNombre: string;
 }
