@@ -38,7 +38,7 @@ function EncabezadoColumna({ id, titulo, nota }: { id: string; titulo: string; n
 
 function DatosRut({ rut }: { rut: Rut }) {
   const filas: [string, ReactNode][] = [
-    ["NIT", <span key="nit" className="tabular-nums">{formatNit(rut.nit ?? "", rut.check_digit)}</span>],
+    ["NIT", <span key="nit" className="whitespace-nowrap tabular-nums">{formatNit(rut.nit ?? "", rut.check_digit)}</span>],
     [rut.person_type === "natural_person" ? "Nombre" : "Razón social", nombreDelRut(rut) || VACIO],
     ["Tipo", rut.person_type ? ETIQUETA_TIPO_PERSONA[rut.person_type] : VACIO],
     ["Dirección", rut.address ?? VACIO],

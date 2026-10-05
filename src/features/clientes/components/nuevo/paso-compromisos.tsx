@@ -180,7 +180,7 @@ export function PasoCompromisos({ compromisosIniciales, onAtras, onOmitir, onSig
   return (
     <div className="flex flex-col gap-5">
       {hayTabla ? (
-        <div className="overflow-x-auto rounded-tarjeta border border-wi-borde">
+        <div className="relative overflow-x-auto rounded-tarjeta border border-wi-borde">
           <table className="wi-tabla">
             <thead>
               <tr>

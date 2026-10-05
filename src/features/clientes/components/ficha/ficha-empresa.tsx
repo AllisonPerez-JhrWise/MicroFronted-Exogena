@@ -24,6 +24,7 @@ const ESTADO_EMPRESA: Record<EstadoCliente, string> = {
 };
 
 const ESTADO_COMPROMISO: Record<string, string> = {
+  created: "Creado",
   por_iniciar: "Por iniciar",
   en_curso: "En curso",
   cerrado: "Cerrado",
@@ -65,7 +66,7 @@ function ListaDatos({ filas }: { filas: [string, ReactNode][] }) {
 
 function Esqueleto() {
   return (
-    <div aria-hidden className="grid gap-5 amplio:grid-cols-[380px_minmax(0,1fr)]">
+    <div aria-hidden className="grid grid-cols-[minmax(0,1fr)] gap-5 amplio:grid-cols-[380px_minmax(0,1fr)]">
       {[0, 1].map((col) => (
         <div key={col} className="flex flex-col gap-5">
           {[0, 1].map((i) => (
@@ -115,7 +116,7 @@ function DatosRut({ ficha }: { ficha: FichaEmpresa }) {
   const filas: [string, ReactNode][] = [
     [
       "NIT",
-      <span key="nit" className="tabular-nums">
+      <span key="nit" className="whitespace-nowrap tabular-nums">
         {formatNit(c.nit, actual?.check_digit ?? digitoDe(c))}
       </span>,
     ],
@@ -188,7 +189,7 @@ function Compromisos({ compromisos }: { compromisos: CompromisoFicha[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="wi-tabla">
           <thead>
             <tr>
@@ -229,7 +230,7 @@ function Compromisos({ compromisos }: { compromisos: CompromisoFicha[] }) {
 
 function OtrasEmpresas({ ficha }: { ficha: FichaEmpresa }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="wi-tabla">
         <thead>
           <tr>
@@ -245,7 +246,7 @@ function OtrasEmpresas({ ficha }: { ficha: FichaEmpresa }) {
           {ficha.group_companies.map((e) => (
             <tr key={e.id}>
               <td>{e.display_name}</td>
-              <td className="tabular-nums">{formatNit(e.nit, digitoDe(e))}</td>
+              <td className="whitespace-nowrap tabular-nums">{formatNit(e.nit, digitoDe(e))}</td>
               <td>
                 <Estado tono={tonoEstado(e.status)}>{ESTADO_EMPRESA[e.status]}</Estado>
               </td>
@@ -327,7 +328,7 @@ export function FichaEmpresaVista({ id }: { id: string }) {
         </p>
       </header>
 
-      <div className="grid items-start gap-5 amplio:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 amplio:grid-cols-[380px_minmax(0,1fr)]">
         <div className="flex flex-col gap-5">
           <Tarjeta titulo="Datos del RUT" nota="no editables">
             <DatosRut ficha={ficha} />

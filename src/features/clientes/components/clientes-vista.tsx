@@ -29,7 +29,7 @@ export function ClientesVista() {
         <SelectorColumnas esVisible={esVisible} onAlternar={alternar} />
       </div>
 
-      <section aria-label="Clientes" className="overflow-x-auto rounded-tarjeta border border-wi-borde bg-wi-superficie">
+      <section aria-label="Clientes" className="relative overflow-x-auto rounded-tarjeta border border-wi-borde bg-wi-superficie">
         <QueryState
           isPending={isPending}
           error={error}

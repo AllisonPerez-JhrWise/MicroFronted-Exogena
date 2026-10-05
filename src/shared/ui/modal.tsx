@@ -19,8 +19,17 @@ export function Modal({ tituloId, onCerrar, children }: ModalProps) {
 
   useEffect(() => {
     const dialogo = ref.current;
-    if (dialogo && !dialogo.open) dialogo.showModal();
-    return () => dialogo?.close();
+    // Quien abrió la ventana (p. ej. «Nuevo cliente») recupera el foco al cerrarla.
+    const origen = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (dialogo && !dialogo.open) {
+      dialogo.showModal();
+      // showModal enfoca el primer botón (la ×): se lleva el foco al primer campo, si hay.
+      dialogo.querySelector<HTMLElement>("input:not([type=hidden]):not(:disabled), select, textarea")?.focus();
+    }
+    return () => {
+      dialogo?.close();
+      if (origen?.isConnected) origen.focus();
+    };
   }, []);
 
   return (
