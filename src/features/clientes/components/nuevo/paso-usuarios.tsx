@@ -52,7 +52,7 @@ const CAMPOS_API: Record<string, string> = {
   contact_email: "correo de contacto",
   contact_phone: "teléfono de contacto",
   notes: "notas",
-  service_id: "servicio",
+  start_date: "fecha de inicio",
   fiscal_year: "año gravable",
   due_date: "vencimiento",
   partner_user_id: "socio",
@@ -417,7 +417,7 @@ export function PasoUsuarios({
       return (
         <Mensaje
           nivel="bloqueo"
-          titulo={`Revisa el compromiso ${c ? `${c.obligacionNombre} ${c.anioGravable}` : detalles.engagement + 1}`}
+          titulo={`Revisa el compromiso ${c ? `de ${c.anioGravable}` : detalles.engagement + 1}`}
           accion={irA(2, "Ir a compromisos")}
         >
           <p>El servicio no aceptó el campo «{campo}».</p>

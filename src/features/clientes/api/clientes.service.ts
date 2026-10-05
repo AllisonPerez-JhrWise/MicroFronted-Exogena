@@ -2,7 +2,7 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/http/api-client";
 import { clientesPageSchema, type ClientesFiltros } from "../schemas/cliente.schema";
 import { grupoSchema, nitCheckSchema, type SeleccionGrupo } from "../schemas/grupo.schema";
-import type { Compromiso } from "../schemas/compromiso.schema";
+import { finDelDia, inicioDelDia, type Compromiso } from "../schemas/compromiso.schema";
 import { fichaEmpresaSchema } from "../schemas/ficha.schema";
 import type { Organizacion } from "../schemas/organizacion.schema";
 import type { Rut } from "../schemas/rut.schema";
@@ -42,10 +42,12 @@ export function cuerpoCrearCliente({ rut, organizacion, grupo, compromisos, usua
       notes: oNull(organizacion.notas),
     },
     // Pasos 3 y 4 son opcionales: «Omitir» envía la lista vacía.
+    // Todo compromiso es de exógena: no se envían obligación ni tipo de servicio.
+    // Las fechas van con la zona horaria de Colombia (-05:00).
     engagements: compromisos.map((c) => ({
-      service_id: c.serviceId,
       fiscal_year: c.anioGravable,
-      due_date: c.vencimiento,
+      due_date: finDelDia(c.vencimiento),
+      start_date: c.inicio ? inicioDelDia(c.inicio) : null,
       partner_user_id: c.socioId,
       manager_user_id: c.gerenteId,
     })),

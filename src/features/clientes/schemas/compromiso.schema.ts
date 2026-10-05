@@ -1,23 +1,5 @@
 import { z } from "zod";
 
-// Catálogo del paso «Compromisos» (back_exogena · GET /obligations y GET /obligations/{id}/service-types).
-export const obligacionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().nullable(),
-  nature: z.enum(["tributaria", "servicio_recurrente"]),
-  /** Si es true (tributaria), el vencimiento es obligatorio. */
-  requires_due_date: z.boolean(),
-});
-
-export const tipoServicioSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().nullable(),
-  /** Servicio (obligación + tipo): es lo que identifica el servicio del compromiso. */
-  service_id: z.string(),
-});
-
 /**
  * Miembros de la firma (Identidad · GET /organizacion/miembros). Socio y gerente NO son roles
  * de la persona sino del compromiso: para los dos selectores se ofrece la misma lista.
@@ -49,23 +31,30 @@ export interface PersonaEquipo {
   email: string;
 }
 
-export type Obligacion = z.infer<typeof obligacionSchema>;
-export type TipoServicio = z.infer<typeof tipoServicioSchema>;
+/** Hoy todo compromiso es de exógena: se muestra como texto fijo. */
+export const SERVICIO_COMPROMISO = "Exógena";
+
+/** Zona horaria de Colombia: back_exogena exige las fechas del compromiso con zona. */
+const ZONA_COLOMBIA = "-05:00";
+
+/** Fecha elegida (YYYY-MM-DD) como fin de ese día en Colombia: «2026-05-15T23:59:00-05:00». */
+export const finDelDia = (fecha: string) => `${fecha}T23:59:00${ZONA_COLOMBIA}`;
+
+/** Fecha elegida (YYYY-MM-DD) como inicio de ese día en Colombia. */
+export const inicioDelDia = (fecha: string) => `${fecha}T00:00:00${ZONA_COLOMBIA}`;
 
 /**
- * Compromiso armado en el paso 3. Se envía en `engagements` de POST /clients.
- * Guarda los nombres solo para mostrarlos en la tabla.
+ * Compromiso de exógena armado en el paso 3. Se envía en `engagements` de POST /clients
+ * (sin obligación ni tipo de servicio). Guarda los nombres solo para mostrarlos en la tabla.
  */
 export interface Compromiso {
-  /** Identificador local de la fila. */
+  /** Identificador local de la fila; el año gravable no se repite entre compromisos. */
   clave: string;
-  obligacionId: string;
-  obligacionNombre: string;
-  tipoServicioNombre: string;
-  serviceId: string;
   anioGravable: number;
-  /** YYYY-MM-DD; null si la obligación no exige vencimiento y no se indicó. */
-  vencimiento: string | null;
+  /** YYYY-MM-DD; obligatorio. Se envía con hora y zona (ver finDelDia). */
+  vencimiento: string;
+  /** YYYY-MM-DD; opcional. Hoy el paso no lo pide (no está en el mockup). */
+  inicio: string | null;
   /** Socio y gerente son obligatorios: back_exogena responde 422 si faltan. */
   socioId: string;
   socioNombre: string;

@@ -1,12 +1,5 @@
-import { z } from "zod";
-import { apiRequest, identityApiRequest } from "@/lib/http/api-client";
-import {
-  miembrosSchema,
-  obligacionSchema,
-  tipoServicioSchema,
-  type Miembro,
-  type PersonaEquipo,
-} from "../schemas/compromiso.schema";
+import { identityApiRequest } from "@/lib/http/api-client";
+import { miembrosSchema, type Miembro, type PersonaEquipo } from "../schemas/compromiso.schema";
 
 /** Puede ser socio o gerente: membresía vigente, usuario activo y no usuario del cliente. */
 const elegible = (m: Miembro) =>
@@ -19,16 +12,6 @@ const aPersona = (m: Miembro): PersonaEquipo => ({
 });
 
 export const catalogosService = {
-  obligaciones: (signal?: AbortSignal) =>
-    apiRequest("/obligations", { schema: z.array(obligacionSchema), signal }),
-
-  /** Solo los tipos que tienen un servicio activo con esa obligación; puede venir vacío. */
-  tiposServicio: (obligacionId: string, signal?: AbortSignal) =>
-    apiRequest(`/obligations/${encodeURIComponent(obligacionId)}/service-types`, {
-      schema: z.array(tipoServicioSchema),
-      signal,
-    }),
-
   /**
    * Personas de la firma para socio y gerente (Identidad). Una sola lista para los dos:
    * en Identidad son roles del compromiso, no de la persona, así que no se filtra por rol.

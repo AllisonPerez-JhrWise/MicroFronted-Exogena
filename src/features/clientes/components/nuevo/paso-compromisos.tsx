@@ -1,14 +1,13 @@
 "use client";
 
 import { useId, useState } from "react";
-import { MensajeError } from "@/shared/components/query-state";
-import { formatFecha, VACIO } from "@/shared/lib/format";
+import { formatFecha } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/button";
 import { Campo, Selector } from "@/shared/ui/campo";
 import { IconoAtras, IconoMas } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
-import { useObligaciones, usePersonasFirma, useTiposServicio } from "../../hooks/use-catalogos";
-import type { Compromiso, PersonaEquipo } from "../../schemas/compromiso.schema";
+import { usePersonasFirma } from "../../hooks/use-catalogos";
+import { SERVICIO_COMPROMISO, type Compromiso, type PersonaEquipo } from "../../schemas/compromiso.schema";
 
 /** Años gravables que se ofrecen: el anterior (por defecto), dos atrás y el actual. */
 function aniosGravables() {
@@ -54,44 +53,33 @@ function SelectorEquipo({ etiqueta, consulta, value, onChange }: SelectorEquipoP
 function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaProps) {
   const id = useId();
   const anios = aniosGravables();
-  const [obligacionId, setObligacionId] = useState("");
-  const [tipoId, setTipoId] = useState("");
-  const [anio, setAnio] = useState(anios[1]);
+  // Por defecto, el año más reciente que aún no tenga compromiso.
+  const [anio, setAnio] = useState(() => anios.slice(1).concat(anios[0]).find((a) => !existentes.some((c) => c.anioGravable === a)) ?? anios[1]);
   const [vencimiento, setVencimiento] = useState("");
   const [socioId, setSocioId] = useState("");
   const [gerenteId, setGerenteId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const obligaciones = useObligaciones();
-  const tipos = useTiposServicio(obligacionId || null);
   // Una sola lista de la firma sirve para socio y gerente.
   const personas = usePersonasFirma();
-  const obligacion = obligaciones.data?.find((o) => o.id === obligacionId);
-  const tipo = tipos.data?.find((t) => t.id === tipoId);
   const socio = personas.data?.find((p) => p.id === socioId);
   const gerente = personas.data?.find((p) => p.id === gerenteId);
   // Socio y gerente son obligatorios (back_exogena responde 422 si faltan).
   const faltaEquipo = [!socio && "el socio", !gerente && "el gerente"].filter(Boolean);
-  const sinServicios = Boolean(obligacionId) && tipos.data?.length === 0;
+  // No puede repetirse el año gravable entre los compromisos del mismo cliente.
+  const anioRepetido = existentes.some((c) => c.anioGravable === anio);
+  // «Guardar compromiso» se habilita con año, vencimiento, socio y gerente.
+  const faltantes = [!vencimiento && "el vencimiento", ...faltaEquipo].filter((f): f is string => Boolean(f));
 
   const guardar = () => {
-    if (!obligacion) return setError("Elige la obligación.");
-    if (!tipo) return setError("Elige el tipo de servicio.");
-    if (obligacion.requires_due_date && !vencimiento) {
-      return setError("Indica el vencimiento: esta obligación lo exige.");
-    }
+    if (anioRepetido) return setError(`Ya hay un compromiso para el año gravable ${anio}.`);
+    if (!vencimiento) return setError("Indica el vencimiento.");
     if (!socio || !gerente) return setError(`Elige ${faltaEquipo.join(" y ")}.`);
-    if (existentes.some((c) => c.serviceId === tipo.service_id && c.anioGravable === anio)) {
-      return setError(`Ya agregaste ${obligacion.name} · ${tipo.name} para el año gravable ${anio}.`);
-    }
     onGuardar({
-      clave: `${tipo.service_id}-${anio}`,
-      obligacionId: obligacion.id,
-      obligacionNombre: obligacion.name,
-      tipoServicioNombre: tipo.name,
-      serviceId: tipo.service_id,
+      clave: String(anio),
       anioGravable: anio,
-      vencimiento: vencimiento || null,
+      vencimiento,
+      inicio: null,
       socioId: socio.id,
       socioNombre: socio.nombre,
       gerenteId: gerente.id,
@@ -104,62 +92,22 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
     set(v);
   };
 
-  if (obligaciones.isError) {
-    return (
-      <tr>
-        <td colSpan={7}>
-          <MensajeError error={obligaciones.error} onRetry={() => obligaciones.refetch()} />
-        </td>
-      </tr>
-    );
-  }
-
   return (
     <>
       <tr>
-        <td>
-          <Selector
-            aria-label="Obligación"
-            value={obligacionId}
-            disabled={obligaciones.isPending}
-            autoFocus
-            onChange={(e) => {
-              cambio(setObligacionId)(e.target.value);
-              setTipoId("");
-            }}
-          >
-            <option value="">{obligaciones.isPending ? "Cargando…" : "Elige la obligación"}</option>
-            {obligaciones.data?.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </Selector>
-        </td>
-        <td>
-          <Selector
-            aria-label="Tipo de servicio"
-            value={tipoId}
-            disabled={!obligacionId || tipos.isPending || sinServicios}
-            onChange={(e) => cambio(setTipoId)(e.target.value)}
-          >
-            <option value="">{obligacionId && tipos.isPending ? "Cargando…" : "Elige el tipo"}</option>
-            {tipos.data?.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Selector>
-        </td>
+        <td className="text-wi-secundario">{SERVICIO_COMPROMISO}</td>
         <td className="num">
           <Selector
             aria-label="Año gravable"
             value={anio}
+            autoFocus
+            aria-invalid={anioRepetido}
             onChange={(e) => cambio(setAnio)(Number(e.target.value))}
           >
             {anios.map((a) => (
               <option key={a} value={a}>
                 {a}
+                {existentes.some((c) => c.anioGravable === a) ? " (ya agregado)" : ""}
               </option>
             ))}
           </Selector>
@@ -167,7 +115,7 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
         <td className="num">
           <Campo
             type="date"
-            aria-label={obligacion?.requires_due_date === false ? "Vencimiento (opcional)" : "Vencimiento"}
+            aria-label="Vencimiento"
             aria-describedby={error ? `${id}-error` : undefined}
             value={vencimiento}
             onChange={(e) => cambio(setVencimiento)(e.target.value)}
@@ -182,15 +130,13 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
         <td />
       </tr>
       <tr>
-        <td colSpan={7}>
+        <td colSpan={6}>
           <div className="flex items-center justify-end gap-3">
             <p id={`${id}-error`} role={error ? "alert" : undefined} className="mr-auto text-apoyo">
               {error ? (
                 <span className="text-wi-riesgo">{error}</span>
-              ) : sinServicios ? (
-                <span className="text-wi-secundario">Esta obligación aún no tiene servicios disponibles.</span>
-              ) : tipos.isError ? (
-                <span className="text-wi-riesgo">No se pudieron cargar los tipos de servicio. Elige de nuevo la obligación.</span>
+              ) : anioRepetido ? (
+                <span className="text-wi-riesgo">Ya hay un compromiso para el año gravable {anio}. Elige otro año.</span>
               ) : personas.isError ? (
                 <span className="text-wi-riesgo">
                   No se pudo cargar la lista de personas de la firma. Intenta de nuevo u omite los compromisos por
@@ -199,17 +145,15 @@ function FilaNuevoCompromiso({ existentes, onGuardar, onCancelar }: FilaNuevaPro
                     Intentar de nuevo
                   </Button>
                 </span>
-              ) : obligacion && !obligacion.requires_due_date ? (
-                <span className="text-wi-secundario">El vencimiento es opcional para esta obligación.</span>
-              ) : faltaEquipo.length && !personas.isPending ? (
+              ) : faltantes.length && !personas.isPending ? (
                 // Si algo está deshabilitado, se dice por qué.
-                <span className="text-wi-secundario">Elige {faltaEquipo.join(" y ")} para guardar.</span>
+                <span className="text-wi-secundario">Indica {faltantes.join(", ").replace(/, ([^,]*)$/, " y $1")} para guardar.</span>
               ) : null}
             </p>
             <Button variant="texto" onClick={onCancelar}>
               Cancelar
             </Button>
-            <Button onClick={guardar} disabled={sinServicios || faltaEquipo.length > 0}>
+            <Button onClick={guardar} disabled={anioRepetido || faltantes.length > 0}>
               Guardar compromiso
             </Button>
           </div>
@@ -240,8 +184,7 @@ export function PasoCompromisos({ compromisosIniciales, onAtras, onOmitir, onSig
           <table className="wi-tabla">
             <thead>
               <tr>
-                <th scope="col">Obligación</th>
-                <th scope="col">Tipo de servicio</th>
+                <th scope="col">Servicio</th>
                 <th scope="col" className="num">
                   Año gravable
                 </th>
@@ -258,16 +201,15 @@ export function PasoCompromisos({ compromisosIniciales, onAtras, onOmitir, onSig
             <tbody>
               {compromisos.map((c) => (
                 <tr key={c.clave}>
-                  <td>{c.obligacionNombre}</td>
-                  <td>{c.tipoServicioNombre}</td>
+                  <td>{SERVICIO_COMPROMISO}</td>
                   <td className="num">{c.anioGravable}</td>
-                  <td className="num">{c.vencimiento ? formatFecha(c.vencimiento) : VACIO}</td>
+                  <td className="num">{formatFecha(c.vencimiento)}</td>
                   <td>{c.socioNombre}</td>
                   <td>{c.gerenteNombre}</td>
                   <td className="text-right">
                     <Button
                       variant="texto"
-                      aria-label={`Quitar ${c.obligacionNombre} ${c.anioGravable}`}
+                      aria-label={`Quitar el compromiso de ${c.anioGravable}`}
                       onClick={() => setCompromisos((cs) => cs.filter((x) => x.clave !== c.clave))}
                     >
                       Quitar
