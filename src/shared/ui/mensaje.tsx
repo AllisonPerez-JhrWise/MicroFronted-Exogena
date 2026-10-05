@@ -2,11 +2,39 @@ import type { ReactNode } from "react";
 
 export type MensajeNivel = "informativo" | "atencion" | "bloqueo" | "confirmacion";
 
-const niveles: Record<MensajeNivel, { caja: string; icono: string; simbolo: string; rol: "status" | "alert" }> = {
-  informativo: { caja: "bg-wi-superficie border-wi-borde", icono: "text-wi-neutro", simbolo: "i", rol: "status" },
-  atencion: { caja: "bg-wi-accion-fondo border-wi-accion-linea", icono: "text-wi-accion", simbolo: "!", rol: "status" },
-  bloqueo: { caja: "bg-wi-riesgo-fondo border-wi-riesgo-linea", icono: "text-wi-riesgo", simbolo: "!", rol: "alert" },
-  confirmacion: { caja: "bg-wi-ok-fondo border-wi-ok-linea", icono: "text-wi-ok", simbolo: "✓", rol: "status" },
+// Título y texto van en el color del nivel (como en los mockups); el informativo, en neutros.
+const niveles: Record<
+  MensajeNivel,
+  { caja: string; titulo: string; texto: string; simbolo: string; rol: "status" | "alert" }
+> = {
+  informativo: {
+    caja: "bg-wi-superficie border-wi-borde",
+    titulo: "text-wi-tinta",
+    texto: "text-wi-secundario",
+    simbolo: "i",
+    rol: "status",
+  },
+  atencion: {
+    caja: "bg-wi-accion-fondo border-wi-accion-linea",
+    titulo: "text-wi-accion",
+    texto: "text-wi-accion",
+    simbolo: "!",
+    rol: "status",
+  },
+  bloqueo: {
+    caja: "bg-wi-riesgo-fondo border-wi-riesgo-linea",
+    titulo: "text-wi-riesgo",
+    texto: "text-wi-riesgo",
+    simbolo: "!",
+    rol: "alert",
+  },
+  confirmacion: {
+    caja: "bg-wi-ok-fondo border-wi-ok-linea",
+    titulo: "text-wi-ok",
+    texto: "text-wi-ok",
+    simbolo: "✓",
+    rol: "status",
+  },
 };
 
 interface MensajeProps {
@@ -24,13 +52,13 @@ export function Mensaje({ nivel, titulo, children, accion }: MensajeProps) {
     <div role={n.rol} className={`flex items-start gap-4 rounded-tarjeta border p-4 ${n.caja}`}>
       <span
         aria-hidden
-        className={`flex size-5 shrink-0 items-center justify-center rounded-pildora border border-current text-apoyo font-semibold ${n.icono}`}
+        className={`flex size-5 shrink-0 items-center justify-center rounded-pildora border border-current text-apoyo font-semibold ${n.titulo}`}
       >
         {n.simbolo}
       </span>
-      <div className="flex-1">
-        <p className="font-semibold text-wi-tinta">{titulo}</p>
-        {children && <div className="text-wi-secundario">{children}</div>}
+      <div className="min-w-0 flex-1">
+        <p className={`font-semibold ${n.titulo}`}>{titulo}</p>
+        {children && <div className={n.texto}>{children}</div>}
       </div>
       {accion && <div className="shrink-0">{accion}</div>}
     </div>

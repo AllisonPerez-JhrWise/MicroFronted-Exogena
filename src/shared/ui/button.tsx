@@ -10,18 +10,17 @@ const variants: Record<ButtonVariant, string> = {
   destructiva: "bg-wi-superficie text-wi-riesgo border border-wi-riesgo hover:bg-wi-riesgo-fondo",
 };
 
+/** Clases de botón, para aplicarlas también a un `<Link>` que se ve como botón. */
+export function buttonClasses(variant: ButtonVariant = "secundaria", className = "") {
+  const box = variant === "texto" ? "min-h-7 px-1" : "min-h-7 px-[14px] py-3 rounded-control";
+  return `${box} inline-flex items-center justify-center gap-3 text-nav font-medium leading-none whitespace-nowrap transition-colors duration-150 disabled:opacity-45 ${variants[variant]} ${className}`;
+}
+
 export function Button({
   variant = "secundaria",
   className = "",
   type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
-  const box = variant === "texto" ? "min-h-7 px-1" : "min-h-7 px-[14px] py-3 rounded-control";
-  return (
-    <button
-      type={type}
-      className={`${box} inline-flex items-center justify-center gap-2 text-nav font-medium leading-none transition-colors duration-150 disabled:opacity-45 ${variants[variant]} ${className}`}
-      {...props}
-    />
-  );
+  return <button type={type} className={buttonClasses(variant, className)} {...props} />;
 }

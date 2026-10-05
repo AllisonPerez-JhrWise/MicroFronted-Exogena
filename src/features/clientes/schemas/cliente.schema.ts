@@ -1,0 +1,54 @@
+import { z } from "zod";
+
+// Pantalla de clientes: una fila por empresa (NIT). back_exogena · GET /companies.
+
+export const ESTADOS_CLIENTE = ["active", "inactive", "rut_renewal_due"] as const;
+export const estadoClienteSchema = z.enum(ESTADOS_CLIENTE);
+export type EstadoCliente = z.infer<typeof estadoClienteSchema>;
+
+export const clienteSchema = z.object({
+  id: z.string(),
+  /** Grupo al que pertenece; null si no está en un grupo. */
+  group_id: z.string().nullable(),
+  /** Nombre de la empresa (columna «Empresa»). */
+  display_name: z.string(),
+  trade_name: z.string().nullable(),
+  nit: z.string(),
+  /** Dígito de verificación: `check_digit` (nuevo) o `dv` (anterior); usar digitoDe(). */
+  check_digit: z.string().nullable().optional(),
+  dv: z.string().nullable().optional(),
+  /** Nombre del grupo; null si no pertenece a un grupo. */
+  group: z.string().nullable(),
+  /** Compromisos por iniciar o en curso. */
+  active_engagements: z.number().int().nonnegative(),
+  /** Fecha de generación del RUT (YYYY-MM-DD). */
+  rut_generated_at: z.string().nullable(),
+  /** Fecha de actualización del RUT (YYYY-MM-DD). */
+  rut_updated_at: z.string().nullable(),
+  /** true = la fecha del RUT no se pudo identificar. */
+  rut_date_unknown: z.boolean(),
+  status: estadoClienteSchema,
+});
+
+export const clientesPageSchema = z.object({
+  items: z.array(clienteSchema),
+  total: z.number(),
+  page: z.number(),
+  size: z.number(),
+  pages: z.number(),
+});
+
+export type Cliente = z.infer<typeof clienteSchema>;
+export type ClientesPage = z.infer<typeof clientesPageSchema>;
+
+export interface ClientesFiltros {
+  empresa?: string;
+  nit?: string;
+  grupo?: string;
+  compromisosMin?: number;
+  compromisosMax?: number;
+  estados?: EstadoCliente[];
+}
+
+/** Dígito de verificación de una empresa, venga como `check_digit` o como `dv`. */
+export const digitoDe = (e: { check_digit?: string | null; dv?: string | null }) => e.check_digit ?? e.dv ?? null;
