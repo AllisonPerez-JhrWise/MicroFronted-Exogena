@@ -1,5 +1,5 @@
 import { extractionApiRequest } from "@/lib/http/api-client";
-import { rutSchema, type CargarRutParams } from "../schemas/rut.schema";
+import { rutEmpresaSchema, rutSchema, type CargarRutParams } from "../schemas/rut.schema";
 
 // Subir un archivo de hasta 10 MB puede tardar más que una consulta normal.
 const TIMEOUT_SUBIDA_MS = 120_000;
@@ -23,4 +23,8 @@ export const rutService = {
   /** GET /ruts/{id}: estado y datos de la lectura. */
   obtener: (id: string, signal?: AbortSignal) =>
     extractionApiRequest(`/ruts/${encodeURIComponent(id)}`, { schema: rutSchema, signal }),
+
+  /** GET /companies/{id}/rut: RUT vigente de la empresa y sus versiones anteriores. */
+  deEmpresa: (companyId: string, signal?: AbortSignal) =>
+    extractionApiRequest(`/companies/${encodeURIComponent(companyId)}/rut`, { schema: rutEmpresaSchema, signal }),
 };

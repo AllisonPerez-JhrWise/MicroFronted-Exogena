@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@/lib/http/api-error";
 import { rutService } from "../api/rut.service";
 
 const INTERVALO_MS = 3000;
@@ -7,7 +8,17 @@ const MAX_CONSULTAS = 60;
 
 export const rutKeys = {
   lectura: (id: string) => ["rut", id] as const,
+  deEmpresa: (companyId: string) => ["rut", "empresa", companyId] as const,
 };
+
+/** RUT de una empresa en extracción (ficha). Un 404 (sin RUT) no se reintenta. */
+export function useRutEmpresa(companyId: string) {
+  return useQuery({
+    queryKey: rutKeys.deEmpresa(companyId),
+    queryFn: ({ signal }) => rutService.deEmpresa(companyId, signal),
+    retry: (intentos, error) => !(error instanceof ApiError && error.status === 404) && intentos < 2,
+  });
+}
 
 /** Sube el RUT a extracción (POST /ruts). */
 export function useCargarRut() {

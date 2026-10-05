@@ -10,7 +10,9 @@ import { Estado, tonoEstado } from "@/shared/ui/estado";
 import { IconoMas } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
 import { useFichaEmpresa } from "../../hooks/use-ficha-empresa";
+import { useRutEmpresa } from "../../hooks/use-rut";
 import { digitoDe, type EstadoCliente } from "../../schemas/cliente.schema";
+import { etiquetaEstadoRut, nombreDelRut, type Rut } from "../../schemas/rut.schema";
 import type { CompromisoFicha, FichaEmpresa } from "../../schemas/ficha.schema";
 
 // Los colores salen de tonoEstado: activo verde, inactivo rojo, el resto naranja.
@@ -76,21 +78,86 @@ function Esqueleto() {
 
 // ---------------------------------------------------------------------------
 
+const unir = (partes: (string | null | undefined)[], separador: string) =>
+  partes.filter(Boolean).join(separador) || VACIO;
+
+/** Código de la casilla 53 con dos dígitos, como en el RUT: «5» → «05». */
+const codigo = (c: string) => c.padStart(2, "0");
+
+/**
+ * Datos del RUT. El detalle (dirección, municipio, CIIU, casilla 53, estado, versiones) viene
+ * de extracción; si no responde, se muestra lo que guarda exógena y se avisa en la tarjeta.
+ */
 function DatosRut({ ficha }: { ficha: FichaEmpresa }) {
   const c = ficha.company;
-  // PENDIENTE (bloque 6): dirección, municipio, CIIU, casilla 53, estado y versiones del RUT
-  // vienen de extracción (GET /companies/{id}/rut); exógena ya no los envía.
-  const actualizado = ficha.rut_date_unknown || !c.rut_updated_at ? "Sin identificar" : formatFecha(c.rut_updated_at);
+  const { data, error, isPending, refetch } = useRutEmpresa(c.id);
+  const sinRut = error instanceof ApiError && error.status === 404;
+
+  if (isPending) {
+    return (
+      <div role="status" aria-busy="true">
+        <span className="sr-only">Cargando el RUT…</span>
+        <div aria-hidden className="h-[200px] rounded-tarjeta border border-wi-borde bg-wi-neutro-fondo" />
+      </div>
+    );
+  }
+
+  const actual: Rut | undefined = data?.current;
+  // Versión vigente = anteriores + 1, como en el mockup («05 sep 2026 · versión 3»).
+  const version = data ? data.previous_versions.length + 1 : null;
+  const fechaActualizado = actual?.rut_updated_at ?? (ficha.rut_date_unknown ? null : c.rut_updated_at);
+  const actualizado = fechaActualizado
+    ? `${formatFecha(fechaActualizado)}${version ? ` · versión ${version}` : ""}`
+    : "Sin identificar";
+  const estado = actual?.rut_status ?? null;
+
+  const filas: [string, ReactNode][] = [
+    [
+      "NIT",
+      <span key="nit" className="tabular-nums">
+        {formatNit(c.nit, actual?.check_digit ?? digitoDe(c))}
+      </span>,
+    ],
+    ["Razón social", (actual && nombreDelRut(actual)) || c.legal_name || c.display_name],
+  ];
+  if (actual) {
+    filas.push(
+      ["Dirección", actual.address ?? VACIO],
+      ["Ciudad", unir([actual.city, actual.department], " · ")],
+      ["Actividad principal", unir([actual.main_activity_code, actual.main_activity_description], " · ")],
+      [
+        "Responsabilidades",
+        unir(actual.tax_responsibilities.map((r) => `${codigo(r.code)} · ${r.description}`), ", "),
+      ],
+      [
+        "Estado del RUT",
+        // Activo en verde; suspendido, cancelado o sin identificar, en naranja (regla de cápsulas).
+        <Estado key="estado" tono={tonoEstado(estado ?? "sin_identificar")}>
+          {etiquetaEstadoRut(estado)}
+        </Estado>,
+      ],
+    );
+  } else {
+    filas.push(["Tipo", c.taxpayer_type ?? VACIO]);
+  }
+  filas.push(["Actualizado", actualizado]);
 
   return (
-    <ListaDatos
-      filas={[
-        ["NIT", <span key="nit" className="tabular-nums">{formatNit(c.nit, digitoDe(c))}</span>],
-        ["Razón social", c.legal_name ?? c.display_name],
-        ["Tipo", c.taxpayer_type ?? VACIO],
-        ["Actualizado", actualizado],
-      ]}
-    />
+    <div className="flex flex-col gap-3">
+      <ListaDatos filas={filas} />
+      {sinRut ? (
+        <p className="text-apoyo text-wi-secundario">Esta empresa aún no tiene el RUT cargado en el sistema de lectura.</p>
+      ) : (
+        error && (
+          <p className="flex flex-wrap items-center gap-2 text-apoyo text-wi-riesgo">
+            No se pudo consultar el RUT, intenta de nuevo.
+            <Button variant="texto" onClick={() => refetch()}>
+              Reintentar
+            </Button>
+          </p>
+        )
+      )}
+    </div>
   );
 }
 

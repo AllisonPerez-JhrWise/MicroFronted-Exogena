@@ -106,3 +106,13 @@ export interface CargarRutParams {
   /** Vacío al crear un cliente nuevo. */
   companyId?: string;
 }
+
+/** RUT de una empresa en extracción: GET /companies/{company_id}/rut (404 si no tiene). */
+export const rutEmpresaSchema = z.object({
+  company_id: z.string(),
+  current: rutSchema,
+  /** Versiones anteriores, de la más reciente a la más antigua. */
+  previous_versions: z.array(rutSchema),
+});
+
+export type RutEmpresa = z.infer<typeof rutEmpresaSchema>;
