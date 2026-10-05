@@ -6,7 +6,7 @@ import { IndicadorPasos } from "@/shared/ui/indicador-pasos";
 import type { Compromiso } from "../../schemas/compromiso.schema";
 import type { SeleccionGrupo } from "../../schemas/grupo.schema";
 import { ORGANIZACION_VACIA, type Organizacion } from "../../schemas/organizacion.schema";
-import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
+import { nombreDelRut, type Rut } from "../../schemas/rut.schema";
 import type { ClienteCreado } from "../../schemas/usuario.schema";
 import { PasoCompromisos } from "./paso-compromisos";
 import { PasoDatosRut } from "./paso-datos-rut";
@@ -22,7 +22,7 @@ const ANCHO_PASO = ["w-[672px]", "w-[672px]", "w-[812px]", "w-[812px]"] as const
 interface DatosNuevoCliente {
   nit: string;
   archivo: File | null;
-  rut: RutValidado | null;
+  rut: Rut | null;
   organizacion: Organizacion;
   /** Grupo del catálogo o nuevo; null = sin grupo. */
   grupo: SeleccionGrupo | null;

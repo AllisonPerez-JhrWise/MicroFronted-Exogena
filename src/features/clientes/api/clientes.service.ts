@@ -5,7 +5,7 @@ import { grupoSchema, nitCheckSchema, type SeleccionGrupo } from "../schemas/gru
 import type { Compromiso } from "../schemas/compromiso.schema";
 import { fichaEmpresaSchema } from "../schemas/ficha.schema";
 import type { Organizacion } from "../schemas/organizacion.schema";
-import type { RutValidado } from "../schemas/rut.schema";
+import type { Rut } from "../schemas/rut.schema";
 import { clienteCreadoSchema, type Usuario } from "../schemas/usuario.schema";
 
 export interface ListarClientesParams extends ClientesFiltros {
@@ -14,7 +14,8 @@ export interface ListarClientesParams extends ClientesFiltros {
 }
 
 export interface CrearClienteParams {
-  rut: RutValidado;
+  /** Lectura del RUT en extracción: exógena la consulta allá con `rut_id`. */
+  rut: Rut;
   organizacion: Organizacion;
   /** Grupo del catálogo o nuevo; null = la empresa no pertenece a un grupo. */
   grupo: SeleccionGrupo | null;
@@ -30,25 +31,8 @@ export function cuerpoCrearCliente({ rut, organizacion, grupo, compromisos, usua
     // Grupo existente (group_id) o nuevo (group_name); nunca ambos. Sin grupo, ninguno.
     ...(grupo?.tipo === "existente" && { group_id: grupo.id }),
     ...(grupo?.tipo === "nuevo" && { group_name: grupo.nombre.trim() }),
-    rut: {
-      nit: rut.nit,
-      dv: rut.dv,
-      person_type: rut.person_type,
-      taxpayer_type: rut.taxpayer_type,
-      ...(rut.person_type === "juridica"
-        ? { legal_name: rut.legal_name }
-        : { first_name: rut.first_name, last_name: rut.last_name }),
-      address: rut.address,
-      department_code: rut.department_code,
-      city_code: rut.city_code,
-      rut_email: rut.rut_email,
-      rut_phone: rut.rut_phone,
-      main_activity_code: rut.main_activity_code,
-      tax_responsibilities: rut.tax_responsibilities.map((r) => r.code),
-      rut_status: rut.rut_status,
-      generated_at: rut.generated_at,
-      rut_updated_at: rut.rut_updated_at,
-    },
+    // Exógena le pide el RUT a extracción (no confía en el navegador): solo viaja el id.
+    rut_id: rut.id,
     // El contacto principal del paso 2 va aquí, no en `users`.
     organization: {
       trade_name: organizacion.nombreComercial,

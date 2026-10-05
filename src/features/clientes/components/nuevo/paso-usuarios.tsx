@@ -12,7 +12,7 @@ import { useCrearCliente } from "../../hooks/use-crear-cliente";
 import type { Compromiso } from "../../schemas/compromiso.schema";
 import type { SeleccionGrupo } from "../../schemas/grupo.schema";
 import { dividirNombre, type Organizacion } from "../../schemas/organizacion.schema";
-import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
+import { nombreDelRut, type Rut } from "../../schemas/rut.schema";
 import {
   MENSAJE_CARGO_PRINCIPAL,
   USUARIO_VACIO,
@@ -176,7 +176,7 @@ export interface DatosPasoUsuarios {
 }
 
 interface PasoUsuariosProps {
-  rut: RutValidado;
+  rut: Rut;
   organizacion: Organizacion;
   grupo: SeleccionGrupo | null;
   compromisos: Compromiso[];
@@ -288,7 +288,7 @@ export function PasoUsuarios({
       }
       case "nit_exists":
         return (
-          <Mensaje nivel="bloqueo" titulo={`Ya existe una empresa con el NIT ${formatNit(rut.nit, rut.dv)}`}>
+          <Mensaje nivel="bloqueo" titulo={`Ya existe una empresa con el NIT ${formatNit(rut.nit ?? rut.typed_nit, rut.check_digit)}`}>
             <p>Búscala en el listado de clientes en lugar de crearla de nuevo.</p>
           </Mensaje>
         );

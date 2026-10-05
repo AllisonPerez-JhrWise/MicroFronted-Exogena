@@ -1,65 +1,108 @@
 import { z } from "zod";
 
-/** NIT sin dígito de verificación. */
-export const NIT_DIGITOS = 9;
-export const RUT_MAX_BYTES = 25 * 1024 * 1024;
+// RUT según extracción (wise-extraccion), dueña del RUT: POST /ruts y GET /ruts/{id} → RutOut.
+// Todas las llaves vienen siempre; lo no leído llega en null y las listas en [].
+// Solo se declara lo que usa el front: zod descarta el resto sin fallar.
 
-// PROVISIONAL: respuesta supuesta de la API del RUT al validar el PDF, hasta tener su contrato.
-// Los nombres siguen el bloque `rut` de POST /clients (back_exogena) para enviarlo tal cual;
-// los *_name / *_description son solo para mostrar en el paso «Datos del RUT».
+/** NIT sin dígito de verificación: solo dígitos, de 6 a 10. Siempre como texto (conserva ceros). */
+export const NIT_MIN = 6;
+export const NIT_MAX = 10;
+export const nitValido = (nit: string) => /^\d+$/.test(nit) && nit.length >= NIT_MIN && nit.length <= NIT_MAX;
+
+export const RUT_MAX_BYTES = 10 * 1024 * 1024;
+export const RUT_TIPOS = ["application/pdf", "image/jpeg", "image/png", "image/webp"] as const;
+export const RUT_EXTENSIONES = [".pdf", ".jpg", ".jpeg", ".png", ".webp"] as const;
+
 const responsabilidadSchema = z.object({
+  /** Código de la casilla 53, sin cero a la izquierda: "5". */
   code: z.string(),
   description: z.string(),
 });
 
-export const rutValidadoSchema = z.object({
-  /** Si el NIT digitado coincide con el que trae el PDF. */
-  nit_matches: z.boolean(),
-  nit: z.string(),
-  dv: z.string(),
-  person_type: z.enum(["juridica", "natural"]),
-  /** Tipo de contribuyente tal como lo trae el RUT, p. ej. «Persona jurídica». */
-  taxpayer_type: z.string().nullable(),
-  /** Razón social (persona jurídica). */
+export const ESTADOS_LECTURA = ["pending", "read", "failed"] as const;
+export type EstadoLectura = (typeof ESTADOS_LECTURA)[number];
+
+export const rutSchema = z.object({
+  id: z.string(),
+  company_id: z.string().nullable(),
+  status: z.enum(ESTADOS_LECTURA),
+  error_code: z
+    .enum(["unrecognized_document", "unreadable_document", "incomplete_reading", "reading_failed"])
+    .nullable(),
+  /** Frase para el usuario, en español: se muestra tal cual. */
+  error_message: z.string().nullable(),
+  /** NIT que digitó el usuario. */
+  typed_nit: z.string(),
+  /** NIT y dígito de verificación leídos del documento. */
+  nit: z.string().nullable(),
+  check_digit: z.string().nullable(),
+  /** null mientras la lectura no esté en `read`. */
+  nit_matches: z.boolean().nullable(),
+  /** Frase para mostrar si el NIT no coincide. */
+  nit_warning: z.string().nullable(),
+  person_type: z.enum(["natural_person", "legal_entity"]).nullable(),
   legal_name: z.string().nullable(),
-  /** Nombres y apellidos (persona natural). */
-  first_name: z.string().nullable().optional(),
-  last_name: z.string().nullable().optional(),
+  first_name: z.string().nullable(),
+  middle_name: z.string().nullable(),
+  last_name: z.string().nullable(),
+  second_last_name: z.string().nullable(),
+  trade_name: z.string().nullable(),
+  /** Texto del RUT, p. ej. «Persona jurídica». */
+  taxpayer_type: z.string().nullable(),
   address: z.string().nullable(),
+  department: z.string().nullable(),
   department_code: z.string().nullable(),
-  department_name: z.string().nullable(),
+  city: z.string().nullable(),
   city_code: z.string().nullable(),
-  city_name: z.string().nullable(),
+  country: z.string().nullable(),
   rut_email: z.string().nullable(),
   rut_phone: z.string().nullable(),
   main_activity_code: z.string().nullable(),
   main_activity_description: z.string().nullable(),
-  tax_responsibilities: z.array(responsabilidadSchema),
-  rut_status: z.enum(["activo", "suspendido", "cancelado"]),
-  /** Fecha de generación del documento PDF (YYYY-MM-DD). La API la exige: sin ella no se puede crear. */
+  /** YYYY-MM-DD */
   generated_at: z.string().nullable(),
-  /** Fecha de actualización del RUT (YYYY-MM-DD). */
   rut_updated_at: z.string().nullable(),
+  rut_status: z.enum(["active", "suspended", "cancelled"]).nullable(),
+  tax_responsibilities: z.array(responsabilidadSchema),
+  /** Advertencias de la lectura, en español: se muestran. */
+  warnings: z.array(z.string()),
 });
 
-export type RutValidado = z.infer<typeof rutValidadoSchema>;
+export type Rut = z.infer<typeof rutSchema>;
 
-const PESOS_DV = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+export const ETIQUETA_LECTURA: Record<EstadoLectura, string> = {
+  pending: "Pendiente",
+  read: "Leída",
+  failed: "Con errores",
+};
 
-/** Dígito de verificación de un NIT (algoritmo DIAN, módulo 11). */
-export function calcularDv(nit: string): string {
-  const digitos = nit.replace(/\D/g, "").split("").reverse();
-  const suma = digitos.reduce((acc, d, i) => acc + Number(d) * PESOS_DV[i], 0);
-  const residuo = suma % 11;
-  return String(residuo > 1 ? 11 - residuo : residuo);
-}
+export const ETIQUETA_TIPO_PERSONA: Record<NonNullable<Rut["person_type"]>, string> = {
+  natural_person: "Persona natural",
+  legal_entity: "Persona jurídica",
+};
+
+const ETIQUETA_ESTADO_RUT: Record<NonNullable<Rut["rut_status"]>, string> = {
+  active: "Activo",
+  suspended: "Suspendido",
+  cancelled: "Cancelado",
+};
+
+export const etiquetaEstadoRut = (estado: Rut["rut_status"]) => (estado ? ETIQUETA_ESTADO_RUT[estado] : "Sin identificar");
 
 /** Nombre con el que se identifica al cliente: razón social o nombres y apellidos. */
-export function nombreDelRut(rut: RutValidado): string {
-  return rut.legal_name ?? [rut.first_name, rut.last_name].filter(Boolean).join(" ");
+export function nombreDelRut(rut: Rut): string {
+  return (
+    rut.legal_name ??
+    [rut.first_name, rut.middle_name, rut.last_name, rut.second_last_name].filter(Boolean).join(" ")
+  );
 }
 
-export interface ValidarRutParams {
+/** La lectura permite continuar: leída y con el NIT coincidente. */
+export const rutListo = (rut: Rut) => rut.status === "read" && rut.nit_matches === true;
+
+export interface CargarRutParams {
   nit: string;
   archivo: File;
+  /** Vacío al crear un cliente nuevo. */
+  companyId?: string;
 }

@@ -7,8 +7,8 @@ import { Button } from "@/shared/ui/button";
 import { Campo } from "@/shared/ui/campo";
 import { IconoSubir } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
-import { useValidarRut } from "../../hooks/use-validar-rut";
-import { NIT_DIGITOS, nombreDelRut, RUT_MAX_BYTES, type RutValidado } from "../../schemas/rut.schema";
+import { useCargarRut } from "../../hooks/use-rut";
+import { NIT_MAX, NIT_MIN, nitValido, nombreDelRut, RUT_MAX_BYTES, type Rut } from "../../schemas/rut.schema";
 
 function errorDeArchivo(archivo: File): string | null {
   const esPdf = archivo.type === "application/pdf" || archivo.name.toLowerCase().endsWith(".pdf");
@@ -20,7 +20,7 @@ function errorDeArchivo(archivo: File): string | null {
 }
 
 /** Bloqueo cuando el NIT digitado no es el del RUT: muestra ambos para compararlos. */
-function NitNoCoincide({ id, nit, rut }: { id: string; nit: string; rut: RutValidado }) {
+function NitNoCoincide({ id, nit, rut }: { id: string; nit: string; rut: Rut }) {
   const caja = "rounded-control border border-wi-riesgo-linea bg-wi-superficie p-3";
   return (
     <div id={id}>
@@ -34,7 +34,7 @@ function NitNoCoincide({ id, nit, rut }: { id: string; nit: string; rut: RutVali
           <div className={caja}>
             <dt className="text-wi-tinta">NIT del RUT</dt>
             <dd className="text-wi-secundario">
-              <span className="tabular-nums">{formatNit(rut.nit, rut.dv)}</span> · {nombreDelRut(rut)}
+              <span className="tabular-nums">{formatNit(rut.nit ?? "", rut.check_digit)}</span> · {nombreDelRut(rut)}
             </dd>
           </div>
         </dl>
@@ -46,7 +46,7 @@ function NitNoCoincide({ id, nit, rut }: { id: string; nit: string; rut: RutVali
 export interface ResultadoPasoNitRut {
   nit: string;
   archivo: File;
-  rut: RutValidado;
+  rut: Rut;
 }
 
 interface PasoNitRutProps {
@@ -65,23 +65,23 @@ export function PasoNitRut({ nitInicial = "", archivoInicial = null, onCancelar,
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   /** RUT leído cuyo NIT no coincide con el digitado. Se limpia al cambiar el NIT o el archivo. */
-  const [noCoincide, setNoCoincide] = useState<RutValidado | null>(null);
+  const [noCoincide, setNoCoincide] = useState<Rut | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
-  const validar = useValidarRut();
+  const validar = useCargarRut();
 
   const limpiarResultado = () => {
     validar.reset();
     setNoCoincide(null);
   };
 
-  const nitCompleto = nit.length === NIT_DIGITOS;
+  const nitCompleto = nitValido(nit);
   const errorNit =
     nitTocado && nit.length > 0 && !nitCompleto
-      ? `El NIT debe tener ${NIT_DIGITOS} dígitos, sin el dígito de verificación.`
+      ? `El NIT debe tener entre ${NIT_MIN} y ${NIT_MAX} dígitos, sin el dígito de verificación.`
       : null;
 
   // Si algo está deshabilitado, se dice por qué.
-  const faltantes = [!nitCompleto && `el NIT de ${NIT_DIGITOS} dígitos`, !archivo && "el RUT en PDF"].filter(Boolean);
+  const faltantes = [!nitCompleto && `el NIT (${NIT_MIN} a ${NIT_MAX} dígitos)`, !archivo && "el RUT en PDF"].filter(Boolean);
   const motivoDeshabilitado = faltantes.length ? `Falta ${faltantes.join(" y ")}.` : null;
 
   const elegirArchivo = (elegido: File | undefined) => {
@@ -105,7 +105,8 @@ export function PasoNitRut({ nitInicial = "", archivoInicial = null, onCancelar,
       { nit, archivo },
       {
         // Si no coinciden, se queda en este paso: el cliente no se puede crear así.
-        onSuccess: (rut) => (rut.nit_matches ? onValidado({ nit, archivo, rut }) : setNoCoincide(rut)),
+        // PENDIENTE (3b): esperar la lectura (useLecturaRut) antes de decidir si coincide.
+        onSuccess: (rut) => (rut.nit_matches === false ? setNoCoincide(rut) : onValidado({ nit, archivo, rut })),
       },
     );
   };
@@ -123,7 +124,7 @@ export function PasoNitRut({ nitInicial = "", archivoInicial = null, onCancelar,
           id={`${id}-nit`}
           inputMode="numeric"
           autoComplete="off"
-          maxLength={NIT_DIGITOS}
+          maxLength={NIT_MAX}
           value={nit}
           onChange={(e) => {
             limpiarResultado();

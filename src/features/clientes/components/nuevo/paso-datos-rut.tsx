@@ -14,20 +14,14 @@ import {
   type Organizacion,
 } from "../../schemas/organizacion.schema";
 import type { SeleccionGrupo } from "../../schemas/grupo.schema";
-import { nombreDelRut, type RutValidado } from "../../schemas/rut.schema";
+import { ETIQUETA_TIPO_PERSONA, etiquetaEstadoRut, nombreDelRut, type Rut } from "../../schemas/rut.schema";
 import { SelectorGrupo } from "./selector-grupo";
 
-const TIPO_PERSONA: Record<RutValidado["person_type"], string> = {
-  juridica: "Persona jurídica",
-  natural: "Persona natural",
-};
-
-// Color según la regla de cápsulas del proyecto (ver tonoEstado).
-const ESTADO_RUT: Record<RutValidado["rut_status"], { etiqueta: string; tono: EstadoTono }> = {
-  activo: { etiqueta: "Activo", tono: tonoEstado("activo") },
-  suspendido: { etiqueta: "Suspendido", tono: tonoEstado("suspendido") },
-  cancelado: { etiqueta: "Cancelado", tono: tonoEstado("cancelado") },
-};
+// Color según la regla de cápsulas del proyecto (ver tonoEstado): activo verde; el resto, naranja.
+const estadoRut = (estado: Rut["rut_status"]): { etiqueta: string; tono: EstadoTono } => ({
+  etiqueta: etiquetaEstadoRut(estado),
+  tono: tonoEstado(estado === "active" ? "activo" : (estado ?? "sin_identificar")),
+});
 
 const unir = (partes: (string | null | undefined)[], separador: string) =>
   partes.filter(Boolean).join(separador) || VACIO;
@@ -42,20 +36,20 @@ function EncabezadoColumna({ id, titulo, nota }: { id: string; titulo: string; n
   );
 }
 
-function DatosRut({ rut }: { rut: RutValidado }) {
+function DatosRut({ rut }: { rut: Rut }) {
   const filas: [string, ReactNode][] = [
-    ["NIT", <span key="nit" className="tabular-nums">{formatNit(rut.nit, rut.dv)}</span>],
-    [rut.person_type === "juridica" ? "Razón social" : "Nombre", nombreDelRut(rut) || VACIO],
-    ["Tipo", TIPO_PERSONA[rut.person_type]],
+    ["NIT", <span key="nit" className="tabular-nums">{formatNit(rut.nit ?? "", rut.check_digit)}</span>],
+    [rut.person_type === "natural_person" ? "Nombre" : "Razón social", nombreDelRut(rut) || VACIO],
+    ["Tipo", rut.person_type ? ETIQUETA_TIPO_PERSONA[rut.person_type] : VACIO],
     ["Dirección", rut.address ?? VACIO],
-    ["Ciudad", unir([rut.city_name, rut.department_name], " · ")],
+    ["Ciudad", unir([rut.city, rut.department], " · ")],
     ["Correo", rut.rut_email ?? VACIO],
     ["Actividad principal", unir([rut.main_activity_code, rut.main_activity_description], " · ")],
     ["Responsabilidades", unir(rut.tax_responsibilities.map((r) => `${r.code} · ${r.description}`), ", ")],
     [
       "Estado del RUT",
-      <Estado key="estado" tono={ESTADO_RUT[rut.rut_status].tono}>
-        {ESTADO_RUT[rut.rut_status].etiqueta}
+      <Estado key="estado" tono={estadoRut(rut.rut_status).tono}>
+        {estadoRut(rut.rut_status).etiqueta}
       </Estado>,
     ],
     ["Actualizado", formatFecha(rut.rut_updated_at)],
@@ -128,7 +122,7 @@ export interface ResultadoPasoDatosRut {
 }
 
 interface PasoDatosRutProps {
-  rut: RutValidado;
+  rut: Rut;
   organizacionInicial: Organizacion;
   grupoInicial: SeleccionGrupo | null;
   /** Devuelve lo diligenciado para no perderlo al volver. */
@@ -164,7 +158,7 @@ export function PasoDatosRut({ rut, organizacionInicial, grupoInicial, onAtras, 
   };
 
   const fecha = rut.rut_updated_at ? `, actualizado el ${formatFecha(rut.rut_updated_at)}` : "";
-  const estadoTexto = ESTADO_RUT[rut.rut_status].etiqueta.toLowerCase();
+  const estadoTexto = estadoRut(rut.rut_status).etiqueta.toLowerCase();
 
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-5">
