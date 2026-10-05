@@ -162,13 +162,24 @@ export function PasoDatosRut({ rut, organizacionInicial, grupoInicial, onAtras, 
 
   return (
     <form onSubmit={enviar} noValidate className="flex flex-col gap-5">
-      {/* Solo se llega aquí si el NIT coincide: si no, el paso 1 bloquea el avance. */}
-      <Mensaje nivel="confirmacion" titulo="El NIT coincide con el del RUT">
-        <p>
-          RUT {estadoTexto}
-          {fecha}.
-        </p>
-      </Mensaje>
+      {/* Solo se llega aquí si el NIT coincide: si no, el paso 1 bloquea el avance.
+          Un solo mensaje: si la lectura trae advertencias, pesan más que la confirmación. */}
+      {rut.warnings.length > 0 ? (
+        <Mensaje nivel="atencion" titulo="El NIT coincide, pero revisa estas advertencias de la lectura">
+          <ul className="list-disc pl-5">
+            {rut.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </Mensaje>
+      ) : (
+        <Mensaje nivel="confirmacion" titulo="El NIT coincide con el del RUT">
+          <p>
+            RUT {estadoTexto}
+            {fecha}.
+          </p>
+        </Mensaje>
+      )}
 
       <div className="grid gap-6 amplio:grid-cols-2">
         <section aria-labelledby={`${id}-rut`}>
