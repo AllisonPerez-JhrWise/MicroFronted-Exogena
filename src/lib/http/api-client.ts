@@ -75,8 +75,8 @@ export function crearClienteApi(baseUrl: string) {
 /** Microservicio de clientes (back_exogena). */
 export const apiRequest = crearClienteApi(env.apiBaseUrl);
 
-/** API del RUT: lectura y validación del PDF. */
-export const rutApiRequest = crearClienteApi(env.rutApiBaseUrl);
+/** Extracción (wise-extraccion): carga y lectura del RUT. Responde sin sobre. */
+export const extractionApiRequest = crearClienteApi(env.extractionApiBaseUrl);
 
 async function request<TSchema extends z.ZodType>(
   baseUrl: string,
@@ -118,12 +118,16 @@ async function request<TSchema extends z.ZodType>(
   const sobre = esSobre(cuerpo) ? cuerpo : null;
 
   if (!response.ok || sobre?.ok === false) {
+    // Sin sobre (extracción, wise-comun) el error viene como { detail }: texto, o la lista
+    // de campos inválidos en un 422. El código HTTP queda en el error para distinguir 404/409/503.
+    const detail =
+      !sobre && cuerpo && typeof cuerpo === "object" ? (cuerpo as { detail?: unknown }).detail : undefined;
     throw new ApiError(
-      sobre?.message ?? `Error ${response.status} en ${method} ${path}`,
+      sobre?.message ?? (typeof detail === "string" ? detail : `Error ${response.status} en ${method} ${path}`),
       "http",
       response.status,
       sobre?.code,
-      sobre ? sobre.details : cuerpo,
+      sobre ? sobre.details : detail !== undefined ? detail : cuerpo,
       requestId,
     );
   }

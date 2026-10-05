@@ -14,8 +14,9 @@ pnpm dev                     # http://localhost:3001/exogena
 | --- | --- |
 | `NEXT_PUBLIC_BASE_PATH` | Ruta bajo la que se monta el MFE (Multi-Zones). Debe coincidir con el rewrite del host. |
 | `NEXT_PUBLIC_API_BASE_URL` | URL base del microservicio de clientes (back_exogena), p. ej. `http://localhost:8000/api/v1`. |
-| `NEXT_PUBLIC_RUT_API_BASE_URL` | URL base de la API del RUT (lectura y validación del PDF). |
-| `NEXT_PUBLIC_RUT_VALIDACION` | `false` para no llamar a la API del RUT y usar datos de ejemplo mientras no exista. |
+| `NEXT_PUBLIC_EXTRACTION_API_BASE_URL` | URL base de extracción (wise-extraccion), dueña del RUT. Local `http://localhost:8001`; detrás del gateway, bajo `/extraccion`. |
+| `NEXT_PUBLIC_ORGANIZATION_ID` | Organización activa (uuid), enviada como `X-Organization-Id`. |
+| `NEXT_PUBLIC_DEV_TOKEN` | Solo desarrollo local: access token de Cognito mientras el host no entregue la sesión. |
 | `NEXT_PUBLIC_API_TIMEOUT_MS` | Timeout por petición (ms). |
 
 Las variables `NEXT_PUBLIC_*` se incrustan en build time: cambiar de ambiente requiere recompilar.

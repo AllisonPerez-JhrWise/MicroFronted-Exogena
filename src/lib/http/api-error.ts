@@ -29,6 +29,6 @@ export class ApiError extends Error {
 
   /** Campos inválidos de un 422, si el microservicio los envió. */
   get detallesValidacion(): DetalleValidacion[] {
-    return this.code === "validation_error" && Array.isArray(this.details) ? (this.details as DetalleValidacion[]) : [];
+    return (this.code === "validation_error" || this.status === 422) && Array.isArray(this.details) ? (this.details as DetalleValidacion[]) : [];
   }
 }
