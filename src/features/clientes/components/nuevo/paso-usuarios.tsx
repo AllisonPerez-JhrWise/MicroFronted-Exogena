@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState, type ReactNode } from "react";
 import { ApiError } from "@/lib/http/api-error";
 import { MensajeError } from "@/shared/components/query-state";
 import { formatNit, VACIO } from "@/shared/lib/format";
-import { Button } from "@/shared/ui/button";
+import { Button, buttonClasses } from "@/shared/ui/button";
 import { Campo } from "@/shared/ui/campo";
 import { IconoAtras, IconoMas } from "@/shared/ui/iconos";
 import { Mensaje } from "@/shared/ui/mensaje";
@@ -12,7 +13,7 @@ import { useCrearCliente } from "../../hooks/use-crear-cliente";
 import type { Compromiso } from "../../schemas/compromiso.schema";
 import type { SeleccionGrupo } from "../../schemas/grupo.schema";
 import { dividirNombre, type Organizacion } from "../../schemas/organizacion.schema";
-import { nombreDelRut, type Rut } from "../../schemas/rut.schema";
+import { etiquetaEstadoRut, nombreDelRut, type Rut } from "../../schemas/rut.schema";
 import {
   MENSAJE_CARGO_PRINCIPAL,
   USUARIO_VACIO,
@@ -63,8 +64,26 @@ const CAMPOS_API: Record<string, string> = {
 
 /** `details` de un error de back_exogena, con las formas que documenta la API. */
 interface DetallesError {
-  cause?: "rut_not_active" | "rut_too_old" | "rut_generated_in_future" | "nit_exists" | "group_exists";
+  cause?:
+    | "extraction_unavailable"
+    | "rut_not_found"
+    | "rut_not_read"
+    | "nit_mismatch"
+    | "rut_already_linked"
+    | "nit_exists"
+    | "group_exists"
+    | "rut_link_rejected"
+    | "rut_not_active"
+    | "rut_too_old"
+    | "rut_generated_in_future"
+    | "rut_incomplete"
+    | "check_digit_mismatch";
+  /** Frase en español que algunas causas traen para mostrar tal cual. */
+  message?: string;
+  /** rut_not_active: estado del RUT (active, suspended, cancelled). */
   status?: string;
+  /** rut_incomplete: campos que la lectura no trajo. */
+  fields?: string[];
   days?: number;
   max_days?: number;
   company_id?: string;
@@ -256,8 +275,58 @@ export function PasoUsuarios({
     if (!error) return null;
     const irA = (paso: number, texto: string) => <Button onClick={() => onIrAPaso(paso, datosActuales)}>{texto}</Button>;
 
-    // PENDIENTE: textos provisionales de los errores del RUT; reemplazar por los mensajes de la tarea.
+    const reintentar = <Button onClick={() => enviar(ultimoOmitir)}>Reintentar</Button>;
+    const otroRut = irA(0, "Cargar otro RUT");
+    const nitTexto = formatNit(rut.nit ?? rut.typed_nit, rut.check_digit);
+
+    // Causas de back_exogena (details.cause): qué pasó y qué hacer.
     switch (detalles?.cause) {
+      case "extraction_unavailable":
+        return (
+          <Mensaje nivel="bloqueo" titulo="No se pudo consultar la lectura del RUT" accion={reintentar}>
+            <p>El servicio de lectura no respondió. Intenta de nuevo en unos segundos.</p>
+          </Mensaje>
+        );
+      case "rut_not_found":
+        return (
+          <Mensaje nivel="bloqueo" titulo="No encontramos el RUT cargado" accion={irA(0, "Volver a cargarlo")}>
+            <p>Vuelve a cargar el RUT para continuar.</p>
+          </Mensaje>
+        );
+      case "rut_not_read":
+        return (
+          <Mensaje nivel="bloqueo" titulo="El RUT aún no está leído" accion={reintentar}>
+            <p>{detalles.message ?? "Espera a que termine la lectura e intenta de nuevo."}</p>
+          </Mensaje>
+        );
+      case "nit_mismatch":
+        return (
+          <Mensaje nivel="bloqueo" titulo="El NIT leído no coincide con el digitado" accion={irA(0, "Corregir el NIT")}>
+            <p>{detalles.message ?? "Corrige el NIT o carga el RUT de esta empresa."}</p>
+          </Mensaje>
+        );
+      case "rut_already_linked":
+        return (
+          <Mensaje nivel="bloqueo" titulo="Este RUT ya pertenece a otro cliente" accion={otroRut}>
+            <p>Carga el RUT de la empresa que estás creando.</p>
+          </Mensaje>
+        );
+      case "nit_exists":
+        return (
+          <Mensaje
+            nivel="bloqueo"
+            titulo={`Ya existe un cliente con el NIT ${nitTexto}`}
+            accion={
+              detalles.company_id && (
+                <Link href={`/clientes/${detalles.company_id}`} className={buttonClasses("secundaria")}>
+                  Abrir el cliente
+                </Link>
+              )
+            }
+          >
+            <p>Ábrelo en lugar de crearlo de nuevo.</p>
+          </Mensaje>
+        );
       case "group_exists": {
         // El grupo nuevo ya existe (escrito distinto): se ofrece usar el del catálogo y reintentar.
         const existente = detalles.group_id && detalles.name ? { id: detalles.group_id, nombre: detalles.name } : null;
@@ -286,33 +355,57 @@ export function PasoUsuarios({
           </Mensaje>
         );
       }
-      case "nit_exists":
+      case "rut_link_rejected":
         return (
-          <Mensaje nivel="bloqueo" titulo={`Ya existe una empresa con el NIT ${formatNit(rut.nit ?? rut.typed_nit, rut.check_digit)}`}>
-            <p>Búscala en el listado de clientes en lugar de crearla de nuevo.</p>
+          <Mensaje nivel="bloqueo" titulo="No se pudo enlazar el RUT con el cliente" accion={reintentar}>
+            <p>Intenta de nuevo. Si continúa, contacta a soporte.</p>
+            {error instanceof ApiError && error.requestId && (
+              <p className="text-apoyo">Identificador para soporte: {error.requestId}</p>
+            )}
           </Mensaje>
         );
-      case "rut_not_active":
+      case "rut_not_active": {
+        const estado = detalles.status as Rut["rut_status"] | undefined;
         return (
-          <Mensaje nivel="bloqueo" titulo="El RUT no está activo" accion={irA(0, "Cargar otro RUT")}>
+          <Mensaje nivel="bloqueo" titulo="El RUT está suspendido o cancelado" accion={otroRut}>
             <p>
-              Su estado es «{detalles.status ?? "desconocido"}». Solo se pueden crear clientes con el RUT activo.
+              {estado ? `Su estado es «${etiquetaEstadoRut(estado)}». ` : ""}Solo se pueden crear clientes con el RUT
+              activo.
             </p>
           </Mensaje>
         );
+      }
       case "rut_too_old":
         return (
-          <Mensaje nivel="bloqueo" titulo={`El RUT se generó hace ${detalles.days ?? "más de"} días`} accion={irA(0, "Cargar otro RUT")}>
-            <p>
-              Se aceptan RUT generados hace máximo {detalles.max_days ?? 30} días. Descarga uno reciente y vuelve a
-              cargarlo.
-            </p>
+          <Mensaje
+            nivel="bloqueo"
+            titulo={`El RUT se generó hace ${detalles.days ?? "más de"} días`}
+            accion={otroRut}
+          >
+            <p>El máximo es {detalles.max_days ?? 30} días. Descarga uno reciente y vuelve a cargarlo.</p>
           </Mensaje>
         );
       case "rut_generated_in_future":
         return (
-          <Mensaje nivel="bloqueo" titulo="La fecha de generación del RUT es posterior a hoy" accion={irA(0, "Cargar otro RUT")}>
+          <Mensaje nivel="bloqueo" titulo="La fecha de generación del RUT es posterior a hoy" accion={otroRut}>
             <p>Revisa el documento y vuelve a cargarlo.</p>
+          </Mensaje>
+        );
+      case "rut_incomplete":
+        return (
+          <Mensaje nivel="bloqueo" titulo="La lectura del RUT quedó incompleta" accion={otroRut}>
+            <p>
+              {detalles.fields?.length
+                ? `No trajo: ${detalles.fields.map((c) => CAMPOS_API[c] ?? c).join(", ")}. `
+                : ""}
+              Carga el RUT otra vez.
+            </p>
+          </Mensaje>
+        );
+      case "check_digit_mismatch":
+        return (
+          <Mensaje nivel="bloqueo" titulo="El dígito de verificación leído no corresponde al NIT" accion={otroRut}>
+            <p>Revisa que el RUT se vea completo y vuelve a cargarlo.</p>
           </Mensaje>
         );
     }
