@@ -51,11 +51,11 @@ function Tarjeta({ titulo, nota, children }: { titulo: string; nota?: string; ch
 /** Lista de datos etiqueta–valor sobre fondo gris claro. */
 function ListaDatos({ filas }: { filas: [string, ReactNode][] }) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-3 rounded-tarjeta border border-wi-borde bg-wi-lienzo p-4">
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 rounded-tarjeta border border-wi-borde bg-wi-lienzo p-4">
       {filas.map(([etiqueta, valor]) => (
         <div key={etiqueta} className="contents">
           <dt className="text-wi-secundario">{etiqueta}</dt>
-          <dd className="break-words text-wi-tinta">{valor}</dd>
+          <dd className="min-w-0 wrap-anywhere text-wi-tinta">{valor}</dd>
         </div>
       ))}
     </dl>
@@ -64,7 +64,7 @@ function ListaDatos({ filas }: { filas: [string, ReactNode][] }) {
 
 function Esqueleto() {
   return (
-    <div aria-hidden className="grid gap-5 amplio:grid-cols-[380px_1fr]">
+    <div aria-hidden className="grid gap-5 amplio:grid-cols-[380px_minmax(0,1fr)]">
       {[0, 1].map((col) => (
         <div key={col} className="flex flex-col gap-5">
           {[0, 1].map((i) => (
@@ -321,7 +321,7 @@ export function FichaEmpresaVista({ id }: { id: string }) {
         </p>
       </header>
 
-      <div className="grid items-start gap-5 amplio:grid-cols-[380px_1fr]">
+      <div className="grid items-start gap-5 amplio:grid-cols-[380px_minmax(0,1fr)]">
         <div className="flex flex-col gap-5">
           <Tarjeta titulo="Datos del RUT" nota="no editables">
             <DatosRut ficha={ficha} />

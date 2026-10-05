@@ -45,7 +45,7 @@ function DatosRut({ rut }: { rut: Rut }) {
     ["Ciudad", unir([rut.city, rut.department], " · ")],
     ["Correo", rut.rut_email ?? VACIO],
     ["Actividad principal", unir([rut.main_activity_code, rut.main_activity_description], " · ")],
-    ["Responsabilidades", unir(rut.tax_responsibilities.map((r) => `${r.code} · ${r.description}`), ", ")],
+    ["Responsabilidades", unir(rut.tax_responsibilities.map((r) => `${r.code.padStart(2, "0")} · ${r.description}`), ", ")],
     [
       "Estado del RUT",
       <Estado key="estado" tono={estadoRut(rut.rut_status).tono}>
@@ -56,11 +56,11 @@ function DatosRut({ rut }: { rut: Rut }) {
   ];
 
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-3 rounded-tarjeta border border-wi-borde bg-wi-lienzo p-4">
+    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 rounded-tarjeta border border-wi-borde bg-wi-lienzo p-4">
       {filas.map(([etiqueta, valor]) => (
         <div key={etiqueta} className="contents">
           <dt className="text-wi-secundario">{etiqueta}</dt>
-          <dd className="break-words text-wi-tinta">{valor}</dd>
+          <dd className="min-w-0 wrap-anywhere text-wi-tinta">{valor}</dd>
         </div>
       ))}
     </dl>
@@ -181,13 +181,13 @@ export function PasoDatosRut({ rut, organizacionInicial, grupoInicial, onAtras, 
         </Mensaje>
       )}
 
-      <div className="grid gap-6 amplio:grid-cols-2">
-        <section aria-labelledby={`${id}-rut`}>
+      <div className="grid gap-6 amplio:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section aria-labelledby={`${id}-rut`} className="min-w-0">
           <EncabezadoColumna id={`${id}-rut`} titulo="Datos del RUT" nota="no editables" />
           <DatosRut rut={rut} />
         </section>
 
-        <section aria-labelledby={`${id}-org`}>
+        <section aria-labelledby={`${id}-org`} className="min-w-0">
           <EncabezadoColumna id={`${id}-org`} titulo="Datos de la organización" nota="editables" />
           <div className="flex flex-col gap-4">
             {CAMPOS.map(({ campo, etiqueta, props }, i) => (
